@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.2.5.2.6.8
+## 4.3
 
 - Moved stem separation into a non-exported foreground service with a partial wake lock, progress notification, cancellation and a persisted request independent of Activity lifetime.
 - Added ordered parallel processing of unchanged Demucs windows on devices with adequate CPU, native memory and managed-heap headroom, with sequential fallback on allocation failure.
