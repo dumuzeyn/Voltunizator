@@ -85,7 +85,7 @@ jobs:
             echo "Release tag must be $EXPECTED_TAG, received: $RELEASE_TAG" >&2
             exit 1
           fi
-          echo "RELEASE_NAME=Voltune $VERSION_NAME" >> "$GITHUB_ENV"
+          echo "RELEASE_NAME=Voltunizator $VERSION_NAME" >> "$GITHUB_ENV"
 
       - name: Restore release keystore
         env:
