@@ -16,29 +16,37 @@ import kotlin.math.sin
 class StemSeparationInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
-    @Test fun benchmarkParallelWindowScheduling() {
+    @Test fun benchmarkParallelInference() {
         org.junit.Assume.assumeTrue(
             InstrumentationRegistry.getArguments().getString("parallelSeparationBenchmark") == "true")
-        val source = File(context.cacheDir, "parallel-benchmark-source.wav")
-        val outputs = List(4) { File(context.cacheDir, "parallel-benchmark-$it.wav") }
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val monitor = instrumentation.addMonitor(MainActivity::class.java.name, null, false)
+        context.startActivity(android.content.Intent(context, MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        val activity = monitor.waitForActivityWithTimeout(15000) as MainActivityCore
+        instrumentation.removeMonitor(monitor)
         try {
-            PcmWaveWriter(source, 44100, 2).use { writer ->
-                repeat(44100 * 43) { frame ->
-                    writer.sample((.25 * sin(2 * PI * 110 * frame / 44100)).toFloat())
-                    writer.sample((.2 * sin(2 * PI * 440 * frame / 44100)).toFloat())
-                }
+            val model = SeparationModelStore.prepare(context) { false }
+            val input = FloatArray(44100 * 2 * 2) { index ->
+                (.25 * sin(2 * PI * (if (index % 2 == 0) 110 else 440) * (index / 2) / 44100)).toFloat()
             }
-            val clip = AudioEditClip(uri = Uri.fromFile(source).toString(), title = "Parallel benchmark",
-                sourceDurationMs = 43000, startMs = 0, endMs = 43000)
+            DemucsSeparator(model).use { it.window(input) { true } }
             for (parallel in listOf(false, true)) {
+                val pool = java.util.concurrent.Executors.newFixedThreadPool(if (parallel) 2 else 1)
                 val started = android.os.SystemClock.elapsedRealtime()
-                StemSeparationProcessor(context, parallelWindows = parallel)
-                    .process(clip, outputs, { false }) { }
-                android.util.Log.i("VoltuneSeparationTest",
-                    "43s parallel=$parallel ms=${android.os.SystemClock.elapsedRealtime() - started}")
-                outputs.forEach { assertEquals(44 + 43000 * 44100 / 1000 * 4L, it.length()) }
+                try {
+                    val futures = List(2) { pool.submit<Array<FloatArray>> {
+                        DemucsSeparator(model).use { it.window(input) { true } }
+                    } }
+                    futures.forEach { future -> future.get().forEach { stem ->
+                        assertEquals(input.size, stem.size)
+                        assertTrue(stem.all(Float::isFinite))
+                    } }
+                    android.util.Log.i("VoltuneSeparationTest",
+                        "two windows parallel=$parallel ms=${android.os.SystemClock.elapsedRealtime() - started}")
+                } finally { pool.shutdownNow() }
             }
-        } finally { (outputs + source).forEach(File::delete) }
+        } finally { InstrumentedTestSupport.finishActivity(instrumentation, activity) }
     }
 
     @Test fun benchmarkFullSeparationWindowing() {
