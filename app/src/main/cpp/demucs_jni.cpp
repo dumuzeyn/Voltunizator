@@ -115,7 +115,7 @@ Java_com_dumuzeyn_mp3player_DemucsSeparator_verifyAttention(JNIEnv*, jobject) {
         reference.middleCols(h * 8, 8) = scores * v.middleCols(h * 8, 8);
     }
     if ((tiled - reference).cwiseAbs().maxCoeff() >= 1e-5f) return false;
-    Eigen::Tensor3dXf input(3, 19, 23);
+    Eigen::Tensor3dXf input(3, 19, 127);
     input.setRandom();
     const Eigen::MatrixXf weights = Eigen::MatrixXf::Random(5, 3 * 3 * 2);
     const Eigen::MatrixXf dense = demucscpp::im2col<3, 2, 2, 1, 1, 0, 1, 1>(input) * weights.transpose();

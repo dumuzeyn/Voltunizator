@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.2.5.2.6.7-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
+    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.2.5.2.6.8-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="Open English version">
@@ -31,7 +31,7 @@
 
 Voltunizator превращает музыку на телефоне в личную медиатеку. Приложение находит треки, продолжает играть в фоне, помнит очередь и позицию, а внешний вид можно настроить под себя. Для прослушивания не нужны интернет, регистрация или облачный сервис.
 
-**Версия 4.2.5.2.6.7.** Улучшены разделение аудио на дорожки, визуализатор, обложки и темы; имя исполнителя можно скрыть в плеере и уведомлениях.
+**Версия 4.2.5.2.6.8.** Разделение аудио ускорено параллельной обработкой на подходящих устройствах и продолжает работать при выключенном экране. Добавлены точный ввод времени разделения и позиционирование фрагментов.
 
 <a id="screenshots"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Главная: продолжить прослушивание и быстрые очереди"><br><em>Главная и быстрые очереди</em></p>
@@ -144,6 +144,10 @@ flowchart LR
 и места; на слабых устройствах разделение может занимать значительно больше времени,
 чем длится песня. Точность зависит от записи, полная изоляция инструментов не гарантируется.
 Модель включена в APK, скачивать её внутри приложения не нужно.
+Разделение работает в отдельной службе с уведомлением о прогрессе и отменой, в том числе
+после закрытия редактора или выключения экрана. На устройствах с достаточным запасом
+памяти и процессорных ядер независимые окна обрабатываются параллельно с прежней моделью.
+Результат сохраняется в черновик; незавершённую задачу можно продолжить при входе в редактор.
 
 ## Возможности
 
@@ -268,7 +272,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Version_4.2.5.2.6.7-9b4dff?style=for-the-badge" alt="Download Voltunizator">
+    <img src="https://img.shields.io/badge/Download_APK-Version_4.2.5.2.6.8-9b4dff?style=for-the-badge" alt="Download Voltunizator">
   </a>
   <a href="#russian">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Открыть русскую версию">
@@ -283,7 +287,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 Voltunizator turns locally stored music into a personal library. It finds tracks quickly, keeps playing in the background, remembers the queue and position, and offers visual customization. Playback requires no internet connection, account, or cloud service. Screenshots appear beside the features they show.
 
-**Version 4.2.5.2.6.7.** Faster stem separation, improved visualizer, artwork and themes, and an option to hide artist names in playback surfaces and notifications.
+**Version 4.2.5.2.6.8.** Stem separation uses parallel processing on suitable devices and continues with the screen off. The editor also supports exact split timecodes and clip positioning.
 
 <a id="screenshots-en"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Home screen with listening continuity and quick queues"><br><em>Home and quick queues</em></p>
@@ -394,6 +398,10 @@ Vocal removal creates an instrumental stem. Separation needs free memory and sto
 and can take substantially longer than the song on slower devices. Results depend
 on the recording; perfect source isolation is not guaranteed. The APK includes the
 model, with no in-app download or upload.
+Separation runs in a foreground service with progress and cancellation, including after
+the editor closes or the display switches off. Devices with sufficient memory and CPU
+cores process independent windows in parallel with the same model. Completed results
+are saved in the draft; the editor can resume a pending job when reopened.
 
 ## Features
 

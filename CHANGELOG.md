@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.2.5.2.6.8
+
+- Moved stem separation into a non-exported foreground service with a partial wake lock, progress notification, cancellation and a persisted request independent of Activity lifetime.
+- Added ordered parallel processing of unchanged Demucs windows on devices with adequate CPU, native memory and managed-heap headroom, with sequential fallback on allocation failure.
+- Persisted completed editor projects before notifying the UI, restored pending work on editor entry, and protected committed outputs against service redelivery.
+- Verified screen-off completion, cancellation, overlapping-window output and dense/tiled numerical agreement.
+- Includes exact split timecodes, clip positioning, full-player transport alignment, external audio intents and renamed repository links.
+
 ## 4.2.5.2.6.7
 
 - Reduced redundant Demucs inference across overlapping outer windows while preserving the pinned four-stem model and its internal overlap.

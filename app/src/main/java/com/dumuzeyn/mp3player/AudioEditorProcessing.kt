@@ -11,18 +11,33 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 internal class AudioEditorProcessing(private val host: MainActivityCore, private val render: () -> Unit) : AutoCloseable {
+    private var stemWasActive = StemSeparationJob.snapshot(host).active
+    private val stemObserver: (StemSeparationJob.State) -> Unit = { state ->
+        if (!closed) {
+            if (stemWasActive && !state.active)
+                host.audioEditorController.syncFromStore()
+            if (stemWasActive && !state.active) localStatus = state.status
+            onProgress?.invoke()
+            if (stemWasActive != state.active) render()
+            stemWasActive = state.active
+        }
+    }
+    init { StemSeparationJob.observe(stemObserver) }
     private val executor = Executors.newSingleThreadExecutor { run ->
         Thread({ Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT); run.run() }, "editor-processing")
     }
     private var job: Future<*>? = null
     private var generation = 0
     private var closed = false
-    var active = false
-        private set
-    var progress = 0
-        private set
-    var status = ""
-        private set
+    private var localActive = false
+    private var localProgress = 0
+    private var localStatus = ""
+    val active get() = localActive || StemSeparationJob.snapshot(host).active
+    val progress get() = if (StemSeparationJob.snapshot(host).active)
+        StemSeparationJob.snapshot(host).progress else localProgress
+    val status get() = StemSeparationJob.snapshot(host).let { state ->
+        if (state.active) state.status else localStatus.ifEmpty { state.status }
+    }
     var onProgress: (() -> Unit)? = null
 
     enum class Operation { SPEECH, STEMS, INSTRUMENTAL }
@@ -37,7 +52,7 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
         val backing = original.clips.filterNot { it.id == vocal.id }
         val backingLanes = backing.map(AudioEditClip::lane).distinct().sorted()
         fun reject(message: String): Boolean {
-            status = message
+            localStatus = message
             Toast.makeText(host, message, Toast.LENGTH_LONG).show()
             render()
             return false
@@ -62,16 +77,16 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
         if ((!directory.isDirectory && !directory.mkdirs()) || directory.usableSpace < required)
             return reject(host.tr("Not enough free space", "Недостаточно свободного места"))
         val token = ++generation
-        active = true
-        progress = 0
-        status = host.tr("Adapting vocals to music", "Адаптация вокала к музыке")
+        localActive = true
+        localProgress = 0
+        localStatus = host.tr("Adapting vocals to music", "Адаптация вокала к музыке")
         render()
         job = executor.submit {
             val result = runCatching {
                 VocalCompositionProcessor(host.applicationContext).process(vocal, backing, directory,
                     { Thread.currentThread().isInterrupted }) { value ->
                     host.uiHandler.post {
-                        if (generation == token && !closed) { progress = value; onProgress?.invoke() }
+                        if (generation == token && !closed) { localProgress = value; onProgress?.invoke() }
                     }
                 }
             }
@@ -82,7 +97,7 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
                     return@post
                 }
                 result.exceptionOrNull()?.let { VoltuneLog.failure("editor_vocal_mix_failed", it) }
-                active = false
+                localActive = false
                 job = null
                 val changed = composition != null && controller.project == original && controller.change {
                     val laneMap = backingLanes.mapIndexed { index, lane -> lane to index + 1 }.toMap()
@@ -100,7 +115,7 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
                     AudioEditProject(listOf(vocalClip) + music)
                 }
                 if (!changed && composition != null) deleteComposition(composition)
-                status = if (changed) host.tr("Vocal mix is ready", "Вокал совмещён с музыкой")
+                localStatus = if (changed) host.tr("Vocal mix is ready", "Вокал совмещён с музыкой")
                     else host.tr("Vocal processing failed", "Не удалось обработать вокал")
                 render()
             }
@@ -119,7 +134,7 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
         val original = controller.project
         try { original.replace(clip) } catch (_: IllegalArgumentException) { return false }
         fun reject(message: String): Boolean {
-            status = message
+            localStatus = message
             Toast.makeText(host, message, Toast.LENGTH_LONG).show()
             render()
             return false
@@ -142,14 +157,20 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
             directory.usableSpace < required) {
             return reject(host.tr("Not enough free space", "Недостаточно свободного места"))
         }
-        val outputs = List(if (operation == Operation.STEMS) 4 else 1) {
-            File(directory, "processed-${UUID.randomUUID()}.wav")
+        if (operation != Operation.SPEECH) {
+            localStatus = ""
+            val accepted = StemSeparationJob.begin(host, original, clip,
+                lanes.take(if (operation == Operation.STEMS) 4 else 1),
+                operation == Operation.INSTRUMENTAL)
+            if (!accepted) return reject(StemSeparationJob.text(host, R.string.editor_separation_failed))
+            render()
+            return true
         }
+        val outputs = listOf(File(directory, "processed-${UUID.randomUUID()}.wav"))
         val token = ++generation
-        active = true
-        progress = 0
-        status = if (operation == Operation.SPEECH) host.tr("Removing noise", "Удаление шумов")
-            else host.tr("Separating audio", "Разделение аудио")
+        localActive = true
+        localProgress = 0
+        localStatus = host.tr("Removing noise", "Удаление шумов")
         render()
         job = executor.submit {
             var lastProgress = -1
@@ -157,28 +178,21 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
                 if (value > lastProgress) {
                     lastProgress = value
                     host.uiHandler.post {
-                        if (generation == token && !closed) { progress = value; onProgress?.invoke() }
+                        if (generation == token && !closed) { localProgress = value; onProgress?.invoke() }
                     }
                 }
             }
             val result = runCatching {
-                if (operation == Operation.SPEECH) SpeechCleanupProcessor(host.applicationContext)
+                SpeechCleanupProcessor(host.applicationContext)
                     .process(clip, outputs.single(), { Thread.currentThread().isInterrupted }, update)
-                else StemSeparationProcessor(host.applicationContext)
-                    .process(clip, outputs, { Thread.currentThread().isInterrupted }, update)
             }
             host.uiHandler.post {
                 if (closed || token != generation) { outputs.forEach { it.delete() }; return@post }
                 result.exceptionOrNull()?.let { VoltuneLog.failure("editor_processing_failed", it) }
-                active = false
+                localActive = false
                 job = null
                 val changed = result.isSuccess && controller.project == original && controller.change { project ->
-                    val names = when (operation) {
-                        Operation.SPEECH -> listOf(host.tr("noise reduced", "без шумов"))
-                        Operation.INSTRUMENTAL -> listOf(host.tr("instrumental", "без вокала"))
-                        Operation.STEMS -> listOf(host.tr("drums", "ударные"), host.tr("bass", "бас"),
-                            host.tr("other", "остальное"), host.tr("vocals", "вокал"))
-                    }
+                    val names = listOf(host.tr("noise reduced", "без шумов"))
                     val processed = outputs.mapIndexed { index, output ->
                         clip.copy(id = if (index == 0) clip.id else UUID.randomUUID().toString(),
                             uri = Uri.fromFile(output).toString(), title = "${clip.title} (${names[index]})",
@@ -187,7 +201,7 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
                     project.copy(clips = project.clips.filterNot { it.id == clip.id } + processed)
                 }
                 if (!changed) outputs.forEach { it.delete() }
-                status = if (changed) host.tr("Processing complete", "Обработка завершена") else host.tr(
+                localStatus = if (changed) host.tr("Processing complete", "Обработка завершена") else host.tr(
                     "Processing failed. Check the file, format and free space.",
                     "Обработка не удалась. Проверьте файл, формат и свободное место.")
                 render()
@@ -197,18 +211,23 @@ internal class AudioEditorProcessing(private val host: MainActivityCore, private
     }
 
     fun cancel() {
-        if (!active) return
+        if (StemSeparationJob.snapshot(host).active) {
+            StemSeparationJob.cancel(host)
+            return
+        }
+        if (!localActive) return
         generation++
         job?.cancel(true)
         job = null
-        active = false
-        status = host.tr("Processing cancelled", "Обработка отменена")
+        localActive = false
+        localStatus = host.tr("Processing cancelled", "Обработка отменена")
         render()
     }
 
     override fun close() {
         closed = true
-        cancel()
+        StemSeparationJob.removeObserver(stemObserver)
+        if (localActive) cancel()
         onProgress = null
         executor.shutdownNow()
     }

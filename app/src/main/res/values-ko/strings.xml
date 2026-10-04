@@ -6,4 +6,15 @@
     <string name="widget_previous">이전</string>
     <string name="widget_play_pause">재생 또는 일시정지</string>
     <string name="widget_next">다음</string>
+    <string name="editor_separating_audio">오디오 분리 중</string>
+    <string name="editor_separation_complete">분리 완료</string>
+    <string name="editor_separation_failed">분리 실패</string>
+    <string name="editor_separation_cancelled">분리 취소됨</string>
+    <string name="editor_separation_changed">분리 중 편집 프로젝트가 변경되었습니다</string>
+    <string name="editor_separation_cancel">분리 취소</string>
+    <string name="editor_stem_drums">드럼</string>
+    <string name="editor_stem_bass">베이스</string>
+    <string name="editor_stem_other">기타 악기</string>
+    <string name="editor_stem_vocals">보컬</string>
+    <string name="editor_stem_instrumental">반주</string>
 </resources>

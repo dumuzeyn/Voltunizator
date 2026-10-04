@@ -14,6 +14,9 @@ internal class AudioEditStore(context: Context) {
         preferences.edit().putString("draft", encode(project)).apply()
     }
 
+    fun saveNow(project: AudioEditProject): Boolean =
+        preferences.edit().putString("draft", encode(project)).commit()
+
     companion object {
         fun encode(project: AudioEditProject): String = JSONArray().apply {
             project.clips.forEach { clip -> put(JSONObject().apply {

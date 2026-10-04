@@ -16,6 +16,31 @@ import kotlin.math.sin
 class StemSeparationInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
+    @Test fun benchmarkParallelWindowScheduling() {
+        org.junit.Assume.assumeTrue(
+            InstrumentationRegistry.getArguments().getString("parallelSeparationBenchmark") == "true")
+        val source = File(context.cacheDir, "parallel-benchmark-source.wav")
+        val outputs = List(4) { File(context.cacheDir, "parallel-benchmark-$it.wav") }
+        try {
+            PcmWaveWriter(source, 44100, 2).use { writer ->
+                repeat(44100 * 43) { frame ->
+                    writer.sample((.25 * sin(2 * PI * 110 * frame / 44100)).toFloat())
+                    writer.sample((.2 * sin(2 * PI * 440 * frame / 44100)).toFloat())
+                }
+            }
+            val clip = AudioEditClip(uri = Uri.fromFile(source).toString(), title = "Parallel benchmark",
+                sourceDurationMs = 43000, startMs = 0, endMs = 43000)
+            for (parallel in listOf(false, true)) {
+                val started = android.os.SystemClock.elapsedRealtime()
+                StemSeparationProcessor(context, parallelWindows = parallel)
+                    .process(clip, outputs, { false }) { }
+                android.util.Log.i("VoltuneSeparationTest",
+                    "43s parallel=$parallel ms=${android.os.SystemClock.elapsedRealtime() - started}")
+                outputs.forEach { assertEquals(44 + 43000 * 44100 / 1000 * 4L, it.length()) }
+            }
+        } finally { (outputs + source).forEach(File::delete) }
+    }
+
     @Test fun benchmarkFullSeparationWindowing() {
         org.junit.Assume.assumeTrue(
             InstrumentationRegistry.getArguments().getString("separationBenchmark") == "true",
@@ -117,6 +142,7 @@ class StemSeparationInstrumentedTest {
     @Test fun longSelectionPreservesSamplesAcrossOuterWindowBoundary() {
         val source = File(context.cacheDir, "separation-long-source.wav")
         val output = File(context.cacheDir, "separation-long-instrumental.wav")
+        val parallelOutput = File(context.cacheDir, "separation-long-parallel.wav")
         val durationFrames = 44100 * 23
         try {
             PcmWaveWriter(source, 44100, 2).use { writer ->
@@ -129,6 +155,9 @@ class StemSeparationInstrumentedTest {
             val clip = AudioEditClip(uri = Uri.fromFile(source).toString(), title = "Long overlap",
                 sourceDurationMs = 23000, startMs = 0, endMs = 23000)
             StemSeparationProcessor(context).process(clip, listOf(output), { false }) { }
+            StemSeparationProcessor(context, parallelWindows = true)
+                .process(clip, listOf(parallelOutput), { false }) { }
+            assertArrayEquals(output.readBytes(), parallelOutput.readBytes())
             assertEquals(44 + durationFrames * 4L, output.length())
             val samples = setOf(0, 44100 * 20 - 1, 44100 * 20, 44100 * 20 + 1,
                 durationFrames - 1)
@@ -150,6 +179,7 @@ class StemSeparationInstrumentedTest {
         } finally {
             source.delete()
             output.delete()
+            parallelOutput.delete()
         }
     }
 }

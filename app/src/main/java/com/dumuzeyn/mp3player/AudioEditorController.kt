@@ -32,7 +32,8 @@ internal class AudioEditorController(private val host: MainActivityCore) : AutoC
     private var closed = false
     private var working = false
     private var exportGeneration = 0
-    val busy get() = working || (previewController.isInitialized() && preview.active) ||
+    val busy get() = working || StemSeparationJob.snapshot(host).active ||
+        (previewController.isInitialized() && preview.active) ||
         (processingController.isInitialized() && processing.active)
     var exporting = false
         private set
@@ -51,6 +52,7 @@ internal class AudioEditorController(private val host: MainActivityCore) : AutoC
         if (loaded) return
         loaded = true
         project = store.load()
+        StemSeparationJob.resume(host)
         selectedClipId = project.clips.firstOrNull()?.id
         preview.maintainCache(project)
         preview.prepareCache(project)
@@ -59,6 +61,22 @@ internal class AudioEditorController(private val host: MainActivityCore) : AutoC
             it.parentFile?.canonicalFile == host.cacheDir.canonicalFile && it.isFile
         }
         readyFile?.let { AudioExportFormat.fromFile(it) }?.let { readyFormat = it }
+    }
+
+    fun syncFromStore() {
+        if (closed || !loaded) return
+        val saved = store.load()
+        if (saved == project) return
+        undo.addLast(project)
+        while (undo.size > 32) undo.removeFirst()
+        redo.clear()
+        project = saved
+        preview.maintainCache(saved)
+        preview.prepareCache(saved)
+        previewMutedLanes.retainAll(saved.clips.mapTo(HashSet(), AudioEditClip::lane))
+        selectedClipId = selectedClipId?.takeIf { id -> saved.clips.any { it.id == id } }
+            ?: saved.clips.lastOrNull()?.id
+        render()
     }
 
     fun change(operation: (AudioEditProject) -> AudioEditProject): Boolean {
