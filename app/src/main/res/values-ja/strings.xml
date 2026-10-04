@@ -6,4 +6,15 @@
     <string name="widget_previous">前へ</string>
     <string name="widget_play_pause">再生または一時停止</string>
     <string name="widget_next">次へ</string>
+    <string name="editor_separating_audio">音声を分離中</string>
+    <string name="editor_separation_complete">分離が完了しました</string>
+    <string name="editor_separation_failed">分離に失敗しました</string>
+    <string name="editor_separation_cancelled">分離をキャンセルしました</string>
+    <string name="editor_separation_changed">分離中に編集プロジェクトが変更されました</string>
+    <string name="editor_separation_cancel">分離をキャンセル</string>
+    <string name="editor_stem_drums">ドラム</string>
+    <string name="editor_stem_bass">ベース</string>
+    <string name="editor_stem_other">その他の楽器</string>
+    <string name="editor_stem_vocals">ボーカル</string>
+    <string name="editor_stem_instrumental">インストゥルメンタル</string>
 </resources>

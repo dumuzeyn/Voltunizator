@@ -761,9 +761,12 @@ class AudioEditorUiInstrumentedTest {
             assertEquals(1, original.clips.size)
             assertTrue(editor.processing.status, editor.processing.separate(original.clips.single(), true))
             editor.processing.cancel()
-            assertFalse(editor.busy)
             assertEquals(original, editor.project)
         }
+        InstrumentedTestSupport.waitFor("Separation did not cancel", 15000) {
+            !StemSeparationJob.snapshot(context).active
+        }
+        instrumentation.runOnMainSync { assertFalse(host.audioEditorController.busy) }
     }
 
     private fun launch(): MainActivityCore {

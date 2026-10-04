@@ -6,4 +6,15 @@
     <string name="widget_previous">पिछला</string>
     <string name="widget_play_pause">चलाएँ या रोकें</string>
     <string name="widget_next">अगला</string>
+    <string name="editor_separating_audio">ऑडियो अलग किया जा रहा है</string>
+    <string name="editor_separation_complete">ऑडियो अलग हो गया</string>
+    <string name="editor_separation_failed">ऑडियो अलग नहीं हो पाया</string>
+    <string name="editor_separation_cancelled">ऑडियो अलग करना रद्द हुआ</string>
+    <string name="editor_separation_changed">अलग करते समय संपादन प्रोजेक्ट बदल गया</string>
+    <string name="editor_separation_cancel">अलग करना रद्द करें</string>
+    <string name="editor_stem_drums">ड्रम</string>
+    <string name="editor_stem_bass">बेस</string>
+    <string name="editor_stem_other">अन्य वाद्य</string>
+    <string name="editor_stem_vocals">स्वर</string>
+    <string name="editor_stem_instrumental">वाद्य संगीत</string>
 </resources>

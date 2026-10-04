@@ -16,6 +16,39 @@ import kotlin.math.sin
 class StemSeparationInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
+    @Test fun benchmarkParallelInference() {
+        org.junit.Assume.assumeTrue(
+            InstrumentationRegistry.getArguments().getString("parallelSeparationBenchmark") == "true")
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val monitor = instrumentation.addMonitor(MainActivity::class.java.name, null, false)
+        context.startActivity(android.content.Intent(context, MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        val activity = monitor.waitForActivityWithTimeout(15000) as MainActivityCore
+        instrumentation.removeMonitor(monitor)
+        try {
+            val model = SeparationModelStore.prepare(context) { false }
+            val input = FloatArray(44100 * 2 * 2) { index ->
+                (.25 * sin(2 * PI * (if (index % 2 == 0) 110 else 440) * (index / 2) / 44100)).toFloat()
+            }
+            DemucsSeparator(model).use { it.window(input) { true } }
+            for (parallel in listOf(false, true)) {
+                val pool = java.util.concurrent.Executors.newFixedThreadPool(if (parallel) 2 else 1)
+                val started = android.os.SystemClock.elapsedRealtime()
+                try {
+                    val futures = List(2) { pool.submit<Array<FloatArray>> {
+                        DemucsSeparator(model).use { it.window(input) { true } }
+                    } }
+                    futures.forEach { future -> future.get().forEach { stem ->
+                        assertEquals(input.size, stem.size)
+                        assertTrue(stem.all(Float::isFinite))
+                    } }
+                    android.util.Log.i("VoltuneSeparationTest",
+                        "two windows parallel=$parallel ms=${android.os.SystemClock.elapsedRealtime() - started}")
+                } finally { pool.shutdownNow() }
+            }
+        } finally { InstrumentedTestSupport.finishActivity(instrumentation, activity) }
+    }
+
     @Test fun benchmarkFullSeparationWindowing() {
         org.junit.Assume.assumeTrue(
             InstrumentationRegistry.getArguments().getString("separationBenchmark") == "true",
@@ -117,6 +150,7 @@ class StemSeparationInstrumentedTest {
     @Test fun longSelectionPreservesSamplesAcrossOuterWindowBoundary() {
         val source = File(context.cacheDir, "separation-long-source.wav")
         val output = File(context.cacheDir, "separation-long-instrumental.wav")
+        val parallelOutput = File(context.cacheDir, "separation-long-parallel.wav")
         val durationFrames = 44100 * 23
         try {
             PcmWaveWriter(source, 44100, 2).use { writer ->
@@ -129,6 +163,9 @@ class StemSeparationInstrumentedTest {
             val clip = AudioEditClip(uri = Uri.fromFile(source).toString(), title = "Long overlap",
                 sourceDurationMs = 23000, startMs = 0, endMs = 23000)
             StemSeparationProcessor(context).process(clip, listOf(output), { false }) { }
+            StemSeparationProcessor(context, parallelWindows = true)
+                .process(clip, listOf(parallelOutput), { false }) { }
+            assertArrayEquals(output.readBytes(), parallelOutput.readBytes())
             assertEquals(44 + durationFrames * 4L, output.length())
             val samples = setOf(0, 44100 * 20 - 1, 44100 * 20, 44100 * 20 + 1,
                 durationFrames - 1)
@@ -150,6 +187,7 @@ class StemSeparationInstrumentedTest {
         } finally {
             source.delete()
             output.delete()
+            parallelOutput.delete()
         }
     }
 }

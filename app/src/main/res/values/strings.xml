@@ -6,5 +6,16 @@
     <string name="widget_previous">Previous</string>
     <string name="widget_play_pause">Play or pause</string>
     <string name="widget_next">Next</string>
+    <string name="editor_separating_audio">Separating audio</string>
+    <string name="editor_separation_complete">Separation complete</string>
+    <string name="editor_separation_failed">Separation failed</string>
+    <string name="editor_separation_cancelled">Separation cancelled</string>
+    <string name="editor_separation_changed">Editor project changed during separation</string>
+    <string name="editor_separation_cancel">Cancel separation</string>
+    <string name="editor_stem_drums">drums</string>
+    <string name="editor_stem_bass">bass</string>
+    <string name="editor_stem_other">other</string>
+    <string name="editor_stem_vocals">vocals</string>
+    <string name="editor_stem_instrumental">instrumental</string>
 </resources>
 

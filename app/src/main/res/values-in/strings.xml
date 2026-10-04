@@ -6,4 +6,15 @@
     <string name="widget_previous">Sebelumnya</string>
     <string name="widget_play_pause">Putar atau jeda</string>
     <string name="widget_next">Berikutnya</string>
+    <string name="editor_separating_audio">Memisahkan audio</string>
+    <string name="editor_separation_complete">Pemisahan selesai</string>
+    <string name="editor_separation_failed">Pemisahan gagal</string>
+    <string name="editor_separation_cancelled">Pemisahan dibatalkan</string>
+    <string name="editor_separation_changed">Proyek berubah selama pemisahan</string>
+    <string name="editor_separation_cancel">Batalkan pemisahan</string>
+    <string name="editor_stem_drums">drum</string>
+    <string name="editor_stem_bass">bas</string>
+    <string name="editor_stem_other">instrumen lain</string>
+    <string name="editor_stem_vocals">vokal</string>
+    <string name="editor_stem_instrumental">instrumental</string>
 </resources>

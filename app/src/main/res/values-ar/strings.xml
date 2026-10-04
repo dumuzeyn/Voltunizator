@@ -6,4 +6,15 @@
     <string name="widget_previous">السابق</string>
     <string name="widget_play_pause">تشغيل أو إيقاف مؤقت</string>
     <string name="widget_next">التالي</string>
+    <string name="editor_separating_audio">جارٍ فصل الصوت</string>
+    <string name="editor_separation_complete">اكتمل الفصل</string>
+    <string name="editor_separation_failed">تعذر فصل الصوت</string>
+    <string name="editor_separation_cancelled">أُلغي الفصل</string>
+    <string name="editor_separation_changed">تغير مشروع المحرر أثناء الفصل</string>
+    <string name="editor_separation_cancel">إلغاء الفصل</string>
+    <string name="editor_stem_drums">طبول</string>
+    <string name="editor_stem_bass">باس</string>
+    <string name="editor_stem_other">بقية الآلات</string>
+    <string name="editor_stem_vocals">غناء</string>
+    <string name="editor_stem_instrumental">موسيقى بلا غناء</string>
 </resources>

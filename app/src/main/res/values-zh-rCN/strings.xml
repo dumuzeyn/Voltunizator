@@ -6,4 +6,15 @@
     <string name="widget_previous">上一首</string>
     <string name="widget_play_pause">播放或暂停</string>
     <string name="widget_next">下一首</string>
+    <string name="editor_separating_audio">正在分离音频</string>
+    <string name="editor_separation_complete">分离完成</string>
+    <string name="editor_separation_failed">分离失败</string>
+    <string name="editor_separation_cancelled">已取消分离</string>
+    <string name="editor_separation_changed">分离过程中编辑项目已更改</string>
+    <string name="editor_separation_cancel">取消分离</string>
+    <string name="editor_stem_drums">鼓</string>
+    <string name="editor_stem_bass">贝斯</string>
+    <string name="editor_stem_other">其他乐器</string>
+    <string name="editor_stem_vocals">人声</string>
+    <string name="editor_stem_instrumental">伴奏</string>
 </resources>

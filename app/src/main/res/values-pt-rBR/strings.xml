@@ -6,4 +6,15 @@
     <string name="widget_previous">Anterior</string>
     <string name="widget_play_pause">Reproduzir ou pausar</string>
     <string name="widget_next">Próxima</string>
+    <string name="editor_separating_audio">Separando áudio</string>
+    <string name="editor_separation_complete">Separação concluída</string>
+    <string name="editor_separation_failed">Falha na separação</string>
+    <string name="editor_separation_cancelled">Separação cancelada</string>
+    <string name="editor_separation_changed">O projeto mudou durante a separação</string>
+    <string name="editor_separation_cancel">Cancelar separação</string>
+    <string name="editor_stem_drums">bateria</string>
+    <string name="editor_stem_bass">baixo</string>
+    <string name="editor_stem_other">outros instrumentos</string>
+    <string name="editor_stem_vocals">voz</string>
+    <string name="editor_stem_instrumental">instrumental</string>
 </resources>

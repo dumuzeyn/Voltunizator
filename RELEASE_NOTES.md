@@ -1,3 +1,17 @@
+# Voltunizator 4.2.5.2.6.8
+
+- Разделение на дорожки выполняется отдельной фоновой службой с уведомлением о прогрессе и отменой. Закрытие редактора и выключение экрана больше не отменяют обработку.
+- На восьмиядерных устройствах с достаточной свободной памятью окна Demucs обрабатываются параллельно. Модель, частота дискретизации и перекрытие окон сохранены; при нехватке памяти используется последовательный расчёт.
+- Задача и готовый проект сохраняются на устройстве. Незавершённая задача восстанавливается при возвращении в редактор; отмена сохраняет исходный проект и удаляет неполные результаты.
+- Уточнены расположение кнопок большого плеера, ввод времени разделения и позиция фрагментов. Приложение открывает внешние аудиофайлы; ссылки обновлены на Voltunizator.
+
+## English
+
+- Stem separation now runs in a foreground service with progress and cancellation, independently of the editor screen. Processing continues with the display off.
+- Devices with eight CPU cores and sufficient free memory process independent Demucs windows in parallel, retaining the model, sample rate and overlap. Low-memory conditions use sequential processing.
+- Pending jobs and completed projects are saved locally. The editor can resume unfinished jobs, while cancellation preserves the original draft and removes partial outputs.
+- Includes full-player control alignment, exact split timecodes, clip positioning, external audio opening and updated repository links.
+
 # Voltunizator 4.2.5.2.6.7
 
 - Ускорено разделение аудио на четыре дорожки за счёт сокращения повторной обработки перекрывающихся окон. Исходная модель и её внутреннее перекрытие сохранены.

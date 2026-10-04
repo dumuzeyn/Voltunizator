@@ -6,4 +6,15 @@
     <string name="widget_previous">Предыдущая</string>
     <string name="widget_play_pause">Воспроизвести или приостановить</string>
     <string name="widget_next">Следующая</string>
+    <string name="editor_separating_audio">Разделение аудио</string>
+    <string name="editor_separation_complete">Разделение завершено</string>
+    <string name="editor_separation_failed">Не удалось разделить аудио</string>
+    <string name="editor_separation_cancelled">Разделение отменено</string>
+    <string name="editor_separation_changed">Проект изменился во время разделения</string>
+    <string name="editor_separation_cancel">Отменить разделение</string>
+    <string name="editor_stem_drums">ударные</string>
+    <string name="editor_stem_bass">бас</string>
+    <string name="editor_stem_other">остальное</string>
+    <string name="editor_stem_vocals">вокал</string>
+    <string name="editor_stem_instrumental">без вокала</string>
 </resources>
