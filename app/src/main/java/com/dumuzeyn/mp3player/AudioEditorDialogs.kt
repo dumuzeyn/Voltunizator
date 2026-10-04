@@ -1,6 +1,7 @@
 package com.dumuzeyn.mp3player
 
 import android.text.Editable
+import android.text.InputType
 import android.text.TextWatcher
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -16,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 internal class AudioEditorDialogs(private val host: MainActivityCore) {
     enum class Focus {
         CUT,
+        POSITION,
         VOLUME,
         CLEAN_SPEECH,
         SEPARATE_STEMS,
@@ -135,6 +137,30 @@ internal class AudioEditorDialogs(private val host: MainActivityCore) {
         }
         when (focus) {
             Focus.CUT -> Unit
+            Focus.POSITION -> {
+                val label = host.tr("Position on lane (m:ss.mmm)",
+                    "Позиция на дорожке (м:сс.мс)")
+                content.addView(host.uiFactory.text(label, 14, false))
+                val timecode = EditText(host).apply {
+                    setText(AudioEditorTimecode.format(clip.offsetMs))
+                    contentDescription = label
+                    setTextColor(host.primaryText)
+                    inputType = InputType.TYPE_CLASS_TEXT
+                    isSingleLine = true
+                }
+                content.addView(timecode, LinearLayout.LayoutParams(-1, host.dp(48)))
+                primary(host.tr("Move clip", "Переместить")) {
+                    val position = AudioEditorTimecode.parse(timecode.text.toString())
+                    if (position == null || position + clip.durationMs > AudioEditClip.MAX_TIME_MS) {
+                        timecode.error = host.tr("Check the position", "Проверьте позицию")
+                    } else if (controller.change { it.replace(clip.copy(offsetMs = position)) }) {
+                        close()
+                    } else {
+                        timecode.error = host.tr("This position overlaps another clip",
+                            "Эта позиция пересекается с другим фрагментом")
+                    }
+                }
+            }
             Focus.VOLUME -> {
                 val level = host.uiFactory.text(
                     "${host.tr("Volume", "Громкость")}: ${(clip.gain * 100).toInt()}%",
@@ -198,6 +224,7 @@ internal class AudioEditorDialogs(private val host: MainActivityCore) {
     }
 
     private fun focusTitle(focus: Focus): String = when (focus) {
+        Focus.POSITION -> host.tr("Clip position", "Позиция фрагмента")
         Focus.VOLUME -> host.tr("Clip volume", "Громкость фрагмента")
         Focus.CLEAN_SPEECH -> host.tr("Remove noise", "Удаление шумов")
         Focus.SEPARATE_STEMS -> host.tr("Separate stems", "Разделение дорожек")

@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.widget.Toast
 import com.dumuzeyn.mp3player.ui.permissions.DeviceAudioPermissionController
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -18,6 +19,17 @@ internal class AudioImportController(private val host: MainActivityCore) {
 
     @Volatile private var closed = false
     @Volatile private var libraryReady = false
+    private var pendingExternalAudio: Pair<Uri, Int>? = null
+
+    fun openExternalAudio(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_VIEW) return
+        val uri = intent.data ?: return
+        val type = intent.type ?: return
+        if (uri.scheme != "content" ||
+            !type.startsWith("audio/") && type != "application/ogg") return
+        val request = uri to intent.flags
+        if (libraryReady) playExternalAudio(request) else pendingExternalAudio = request
+    }
 
     fun openFiles() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -95,7 +107,58 @@ internal class AudioImportController(private val host: MainActivityCore) {
 
     fun onLibraryReady() {
         libraryReady = true
+        pendingExternalAudio?.let { request ->
+            pendingExternalAudio = null
+            playExternalAudio(request)
+        }
         autoImportDeviceMusicIfAllowed()
+    }
+
+    private fun playExternalAudio(request: Pair<Uri, Int>) {
+        val (uri, flags) = request
+        host.findTrack(uri.toString())?.let {
+            host.playbackQueueController.playTrack(it)
+            return
+        }
+        val existing = ArrayList(host.libraryState.tracks)
+        val known = existing.mapTo(HashSet(), Track::uri)
+        try {
+            importExecutor.execute {
+                val result = runCatching {
+                    val track = readTrack(uri, flags, true, known, existing)
+                        ?: return@runCatching null
+                    val imported = LibraryImportStore(host).use { store ->
+                        store.commitStandalone(listOf(track), true)
+                    }
+                    track to imported
+                }
+                result.exceptionOrNull()?.let { VoltuneLog.failure("external_audio_open_failed", it) }
+                host.uiHandler.post {
+                    if (closed) return@post
+                    val playback = result.getOrNull()
+                    if (playback == null) {
+                        Toast.makeText(host, host.tr("Cannot open this audio file",
+                            "Не удалось открыть аудиофайл"), Toast.LENGTH_LONG).show()
+                        return@post
+                    }
+                    val (track, imported) = playback
+                    if (imported.isNotEmpty()) {
+                        for (item in imported) {
+                            val index = indexOfTrackId(host.libraryState.tracks, item.trackId)
+                            if (index >= 0) host.libraryState.tracks[index] = item
+                            else host.libraryState.tracks.add(item)
+                        }
+                        TrackStore.sort(host.libraryState.tracks)
+                        host.libraryRepository.reindex()
+                        host.librarySnapshotApplier.rebuildDerivedAndRender()
+                    }
+                    host.playbackController.submitQueue(
+                        listOf(imported.firstOrNull() ?: track), 0, 0, host.repeatMode(), true)
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            // Activity is closing.
+        }
     }
 
     fun onAudioPermissionChanged() {

@@ -173,7 +173,14 @@ open class MainActivityCore : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        audioImportController.openExternalAudio(intent)
         activityCoordinator.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        audioImportController.openExternalAudio(intent)
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {

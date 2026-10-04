@@ -25,6 +25,18 @@
             android:exported="false"
             android:theme="@style/AppTheme" />
         <activity
+            android:name=".ExternalAudioActivity"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="audio/*" />
+                <data android:scheme="content" android:mimeType="application/ogg" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".DarkMainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:exported="false"
