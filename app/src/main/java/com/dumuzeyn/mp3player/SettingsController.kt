@@ -93,7 +93,7 @@ internal class SettingsController(private val host: MainActivityCore) {
             host.startActivity(
                 Intent(
                     Intent.ACTION_VIEW,
-                    Uri.parse("https://github.com/dumuzeyn/MP3-Player-Voltune"),
+                    Uri.parse("https://github.com/dumuzeyn/Voltunizator"),
                 ).apply {
                     addCategory(Intent.CATEGORY_BROWSABLE)
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)

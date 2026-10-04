@@ -127,7 +127,8 @@ class AudioEditorUiInstrumentedTest {
                 "Убрать шумы",
                 "Разделить на дорожки",
                 "Работа с вокалом",
-                "Удалить выбранный фрагмент",
+                "Позиция",
+                "Удалить",
             )))
             AudioEditorDialogs(host).chooseExport()
             val formats = descendants(host.overlayHost).filterIsInstance<android.widget.Spinner>().single()
@@ -192,6 +193,68 @@ class AudioEditorUiInstrumentedTest {
         instrumentation.runOnMainSync {
             restored.switchTabAnimated(LibraryTabs.EDITOR, 1)
             assertEquals(2, restored.audioEditorController.project.clips.size)
+        }
+    }
+
+    @Test fun exactPositionAndSplitTimecodeWorkOnSecondLane() {
+        context.getSharedPreferences("audio_editor", 0).edit().clear().commit()
+        wave = InstrumentedTestSupport.createTestWave(context, "editor-position.wav", 20)
+        val track = Track(Uri.fromFile(wave).toString(), "Позиция тест", "Voltune", "Test", "Test", 20000)
+        TrackStore.save(context, listOf(track))
+        val host = launch()
+        lateinit var second: AudioEditClip
+        instrumentation.runOnMainSync {
+            host.switchTabAnimated(LibraryTabs.EDITOR, 1)
+            host.audioEditorController.add(track, 0)
+            host.audioEditorController.add(track, 1)
+            second = host.audioEditorController.project.clips.last()
+            host.audioEditorController.change { it.replace(second.copy(endMs = 4000)) }
+        }
+        InstrumentedTestSupport.waitFor("Editor tab did not finish opening", 5000) {
+            !host.navigationState.tabAnimating
+        }
+        instrumentation.runOnMainSync { host.render() }
+        awaitLayout(host)
+        instrumentation.runOnMainSync {
+            val buttons = descendants(host.list).filterIsInstance<Button>()
+            val cut = buttons.first { it.text.toString() == "Обрезать" }
+            val vocal = buttons.first { it.text.toString() == "Работа с вокалом" }
+            val delete = buttons.first { it.text.toString() == "Удалить" }
+            assertEquals(cut.width, vocal.width)
+            assertEquals(cut.width, delete.width)
+            buttons.first { it.text.toString() == "Позиция" }.performClick()
+            val input = descendants(host.overlayHost).filterIsInstance<android.widget.EditText>()
+                .first { it.contentDescription == "Позиция на дорожке (м:сс.мс)" }
+            input.setText("0:16.000")
+            descendants(host.overlayHost).filterIsInstance<Button>()
+                .first { it.text.toString() == "Переместить" }.performClick()
+            assertEquals(16_000L, host.audioEditorController.project.clips.last().offsetMs)
+            assertTrue(host.audioEditorController.moveClip(
+                host.audioEditorController.project.clips.last(),
+                AudioEditorDropTarget.Existing(1), 12_500L))
+            assertEquals(12_500L, host.audioEditorController.project.clips.last().offsetMs)
+            AudioEditorDialogs(host).edit(host.audioEditorController.project.clips.last(),
+                AudioEditorDialogs.Focus.CUT)
+            descendants(host.overlayHost).filterIsInstance<android.widget.Spinner>()
+                .single().setSelection(1)
+        }
+        InstrumentedTestSupport.waitFor("Split timecode did not appear", 5000) {
+            var ready = false
+            instrumentation.runOnMainSync {
+                ready = descendants(host.overlayHost).filterIsInstance<android.widget.EditText>()
+                    .any { it.contentDescription == "Время разделения (м:сс.мс)" }
+            }
+            ready
+        }
+        instrumentation.runOnMainSync {
+            val input = descendants(host.overlayHost).filterIsInstance<android.widget.EditText>()
+                .first { it.contentDescription == "Время разделения (м:сс.мс)" }
+            input.setText("0:01.250")
+            descendants(host.overlayHost).filterIsInstance<Button>()
+                .first { it.text.toString() == "Разделить" }.performClick()
+            val parts = host.audioEditorController.project.clips.filter { it.lane == 1 }
+            assertEquals(listOf(12_500L, 13_750L), parts.map(AudioEditClip::offsetMs))
+            assertEquals(listOf(1250L, 2750L), parts.map(AudioEditClip::durationMs))
         }
     }
 

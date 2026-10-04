@@ -244,7 +244,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 Автор проекта **Зейналов У. Р. о.**
 
-[Репозиторий Voltune](https://github.com/dumuzeyn/MP3-Player-Voltune)
+[Репозиторий Voltunizator](https://github.com/dumuzeyn/Voltunizator)
 
 [Поддержать автора через CloudTips](https://pay.cloudtips.ru/p/54e5a4f9). Поддержка является добровольной и безвозмездной, не открывает подписку, дополнительные функции или другие преимущества.
 
@@ -493,6 +493,6 @@ Source code is available for personal, educational, and non-commercial use. Comm
 
 Project author: **Zeynalov U. R. o.**
 
-[Voltune repository](https://github.com/dumuzeyn/MP3-Player-Voltune)
+[Voltunizator repository](https://github.com/dumuzeyn/Voltunizator)
 
 [Support the author through CloudTips](https://pay.cloudtips.ru/p/54e5a4f9). Support is voluntary and gratuitous; it does not unlock subscriptions, additional features, or other benefits.

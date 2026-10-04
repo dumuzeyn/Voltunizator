@@ -96,6 +96,7 @@ object TrackStore {
         }
         val metadata = readMetadata(context, uri)
         val title = metadata.title?.takeIf { it.isNotBlank() }
+            ?: displayTitle(context, uri)
             ?: uri.lastPathSegment?.substringAfterLast('/')
             ?: "Song"
         val artist = metadata.artist.takeUnless(::isBlank) ?: "Unknown artist"
@@ -186,6 +187,14 @@ object TrackStore {
             closeQuietly(descriptor)
         }
     }
+
+    private fun displayTitle(context: Context, uri: Uri): String? = runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0)?.substringBeforeLast('.')
+                    ?.takeIf { it.isNotBlank() } else null
+            }
+    }.getOrNull()
 
     @JvmStatic
     fun updateDuration(context: Context, uri: String?, durationMs: Int) {

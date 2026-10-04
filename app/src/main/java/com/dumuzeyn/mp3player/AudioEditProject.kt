@@ -94,19 +94,22 @@ internal data class AudioEditProject(val clips: List<AudioEditClip> = emptyList(
     fun nearestFreeOffset(id: String, lane: Int, nearMs: Long): Long {
         val moving = clips.first { it.id == id }
         require(lane in 0 until AudioEditClip.MAX_LANES && nearMs >= 0)
-        val occupied = clips.filter { it.id != id && it.lane == lane }
-        val candidates = buildSet {
-            add(0L)
-            occupied.forEach { clip ->
-                add(clip.finishMs)
-                add(clip.offsetMs - moving.durationMs)
-            }
-        }.filter { start ->
-            start >= 0 && start + moving.durationMs <= AudioEditClip.MAX_TIME_MS &&
-                occupied.none { other -> start < other.finishMs && start + moving.durationMs > other.offsetMs }
+        val occupied = clips.filter { it.id != id && it.lane == lane }.sortedBy { it.offsetMs }
+        val latest = AudioEditClip.MAX_TIME_MS - moving.durationMs
+        var gapStart = 0L
+        var best: Long? = null
+        fun consider(gapEnd: Long) {
+            if (gapStart > gapEnd) return
+            val candidate = nearMs.coerceIn(gapStart, gapEnd)
+            if (best == null || kotlin.math.abs(candidate - nearMs) <
+                kotlin.math.abs(best!! - nearMs)) best = candidate
         }
-        return candidates.minByOrNull { kotlin.math.abs(it - nearMs) }
-            ?: throw IllegalArgumentException("No free space on lane")
+        occupied.forEach { other ->
+            consider(minOf(latest, other.offsetMs - moving.durationMs))
+            gapStart = maxOf(gapStart, other.finishMs)
+        }
+        consider(latest)
+        return best ?: throw IllegalArgumentException("No free space on lane")
     }
 
     fun moveToNewEdgeLane(id: String, above: Boolean, nearMs: Long): AudioEditProject {

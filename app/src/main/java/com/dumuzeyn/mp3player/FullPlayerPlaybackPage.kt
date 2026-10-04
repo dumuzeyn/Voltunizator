@@ -60,7 +60,6 @@ internal class FullPlayerPlaybackPage(
         addActionRow(content, track)
         addAudioTools(content)
         addSeek(content, track)
-        addTransport(content)
         boundTrack = track
         refresh(false)
         progress.setActive(active)
@@ -229,11 +228,13 @@ internal class FullPlayerPlaybackPage(
         }
         seek.setOnSeekBarChangeListener(seekListener(elapsed, remaining) { dragged })
         content.addView(seek, LinearLayout.LayoutParams(-1, host.dp(42)))
-        val times = host.uiFactory.row()
+        val times = host.uiFactory.row().apply { gravity = Gravity.CENTER_VERTICAL }
+        elapsed.gravity = Gravity.START or Gravity.CENTER_VERTICAL
         remaining.gravity = Gravity.END or Gravity.CENTER_VERTICAL
-        times.addView(elapsed, LinearLayout.LayoutParams(0, host.dp(28), 1f))
-        times.addView(remaining, LinearLayout.LayoutParams(0, host.dp(28), 1f))
-        content.addView(times)
+        times.addView(elapsed, LinearLayout.LayoutParams(0, host.dp(64), 1f))
+        addTransport(times)
+        times.addView(remaining, LinearLayout.LayoutParams(0, host.dp(64), 1f))
+        content.addView(times, LinearLayout.LayoutParams(-1, host.dp(72)))
         progress.bind(root!!, track, seek, elapsed, remaining)
     }
 
@@ -262,15 +263,14 @@ internal class FullPlayerPlaybackPage(
         }
     }
 
-    private fun addTransport(content: LinearLayout) {
-        val row = host.uiFactory.row().apply { gravity = Gravity.CENTER }
+    private fun addTransport(row: LinearLayout) {
         val previous = host.uiFactory.icon(StrictIcon.PREVIOUS).apply {
             setOnClickListener {
                 actions.previous()
                 refresh(true)
             }
         }
-        row.addView(previous, host.uiFactory.square(68))
+        row.addView(previous, host.uiFactory.square(52))
         play = host.uiFactory.icon(if (state.isPlaying()) StrictIcon.PAUSE else StrictIcon.PLAY).apply {
             host.uiFactory.applyPlainIconStyle(
                 this,
@@ -280,15 +280,14 @@ internal class FullPlayerPlaybackPage(
                 actions.togglePlayPause()
                 refresh(false)
             }
-        }.also { row.addView(it, host.uiFactory.square(84)) }
+        }.also { row.addView(it, host.uiFactory.square(64)) }
         val next = host.uiFactory.icon(StrictIcon.NEXT).apply {
             setOnClickListener {
                 actions.next()
                 refresh(true)
             }
         }
-        row.addView(next, host.uiFactory.square(68))
-        content.addView(row, LinearLayout.LayoutParams(-1, host.dp(100)))
+        row.addView(next, host.uiFactory.square(52))
     }
 
     private fun toolParams(): LinearLayout.LayoutParams =

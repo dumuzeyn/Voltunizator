@@ -40,10 +40,21 @@ class AudioEditProjectTest {
         assertEquals(AudioEditClip.SMOOTH_JOIN_MS, smooth.clips[1].fadeInMs)
     }
 
-    @Test fun nearestFreeOffsetSnapsClipToNeighborWithoutOverlap() {
+    @Test fun nearestFreeOffsetAllowsAnyFreePositionWithoutOverlap() {
         val source = AudioEditProject(listOf(clip("left"), clip("moving", offset = 12_000)))
-        assertEquals(8_000L, source.nearestFreeOffset("moving", 0, 12_000))
-        assertEquals(0L, source.nearestFreeOffset("moving", 1, 12_000))
+        assertEquals(12_000L, source.nearestFreeOffset("moving", 0, 12_000))
+        assertEquals(16_000L, source.nearestFreeOffset("moving", 1, 16_000))
+        assertEquals(8_000L, source.nearestFreeOffset("moving", 0, 4_000))
+    }
+
+    @Test fun nearestFreeOffsetClampsToNearestAvailableGap() {
+        val source = AudioEditProject(listOf(
+            clip("first", offset = 0),
+            clip("middle", offset = 20_000),
+            clip("moving", offset = 40_000),
+        ))
+        assertEquals(12_000L, source.nearestFreeOffset("moving", 0, 13_000))
+        assertEquals(28_000L, source.nearestFreeOffset("moving", 0, 26_000))
     }
 
     @Test fun removeEntireClipAndJoinRetainsOrder() {

@@ -96,21 +96,43 @@ internal class AudioEditorCutDialog(
 
     private fun renderSplit() {
         val waveform = waveform(cursorOnly = true)
-        val label = host.uiFactory.text("", 14, false)
-        fun update(value: Long) {
-            label.text = host.tr("Split at ", "Разделить в ") + seconds(value - clip.startMs) +
-                host.tr(" s", " с")
+        val label = host.tr("Split time (m:ss.mmm)", "Время разделения (м:сс.мс)")
+        body.addView(host.uiFactory.text(label, 14, false))
+        val timecode = EditText(host).apply {
+            setText(AudioEditorTimecode.format(waveform.cursorMs - clip.startMs))
+            contentDescription = label
+            setTextColor(host.primaryText)
+            inputType = InputType.TYPE_CLASS_TEXT
+            isSingleLine = true
         }
-        waveform.onCursor =(::update)
-        update(waveform.cursorMs)
-        body.addView(label)
+        body.addView(timecode, LinearLayout.LayoutParams(-1, host.dp(48)))
+        waveform.onCursor = { value ->
+            timecode.setText(AudioEditorTimecode.format(value - clip.startMs))
+            timecode.setSelection(timecode.length())
+        }
+        timecode.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                AudioEditorTimecode.parse(s.toString())?.let { relative ->
+                    if (relative in 1 until clip.durationMs) waveform.setCursor(clip.startMs + relative)
+                }
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        fun splitPosition(): Long {
+            val relative = AudioEditorTimecode.parse(timecode.text.toString())
+            require(relative != null && relative in 1 until clip.durationMs)
+            return clip.startMs + relative
+        }
         body.addView(AudioEditorPreviewControls(host, { AudioEditProject(listOf(
             clip.copy(offsetMs = 0, lane = 0),
-        )) }, startPositionMs = { (waveform.cursorMs - clip.startMs).coerceAtLeast(0) },
+        )) }, startPositionMs = { splitPosition() - clip.startMs },
             stopOnDetach = true))
         apply.text = host.tr("Split into two parts", "Разделить")
         applyAction = {
-            if (controller.change { it.split(clip.id, waveform.cursorMs) }) close()
+            runCatching { splitPosition() }.onSuccess { position ->
+                if (controller.change { it.split(clip.id, position) }) close()
+            }.onFailure { timecode.error = host.tr("Check the split time", "Проверьте время разделения") }
         }
     }
 

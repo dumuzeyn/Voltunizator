@@ -6,7 +6,7 @@ Security fixes are applied to the latest published release of Voltune.
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a vulnerability. Use [GitHub private vulnerability reporting](https://github.com/dumuzeyn/MP3-Player-Voltune/security/advisories/new) and include:
+Do not open a public issue for a vulnerability. Use [GitHub private vulnerability reporting](https://github.com/dumuzeyn/Voltunizator/security/advisories/new) and include:
 
 - the affected app version and Android version;
 - reproducible steps and expected impact;

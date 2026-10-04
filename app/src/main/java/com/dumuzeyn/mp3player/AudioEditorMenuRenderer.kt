@@ -140,6 +140,9 @@ internal class AudioEditorMenuRenderer(private val host: MainActivityCore) : Men
             EditorAction(host.tr("Cut", "Обрезать"), enabled) {
                 dialogs.edit(clip, AudioEditorDialogs.Focus.CUT)
             },
+            EditorAction(host.tr("Position", "Позиция"), enabled) {
+                dialogs.edit(clip, AudioEditorDialogs.Focus.POSITION)
+            },
             EditorAction(host.tr("Change volume", "Изменить громкость"), enabled) {
                 dialogs.edit(clip, AudioEditorDialogs.Focus.VOLUME)
             },
@@ -152,6 +155,13 @@ internal class AudioEditorMenuRenderer(private val host: MainActivityCore) : Men
             EditorAction(host.tr("Vocal work", "Работа с вокалом"), enabled) {
                 dialogs.edit(clip, AudioEditorDialogs.Focus.REMOVE_VOCALS)
             },
+            EditorAction(host.tr("Delete", "Удалить"), enabled) {
+                host.showConfirmPanel(
+                    host.tr("Remove selected clip?", "Удалить выбранный фрагмент?"),
+                    clip.title,
+                    Runnable { controller.change { it.remove(clip.id) } },
+                )
+            },
         )
         actions.chunked(2).forEach { pair ->
             val row = host.uiFactory.row()
@@ -161,15 +171,12 @@ internal class AudioEditorMenuRenderer(private val host: MainActivityCore) : Men
                         setMargins(host.dp(2), host.dp(2), host.dp(2), host.dp(2))
                     })
             }
+            if (pair.size == 1) row.addView(View(host),
+                LinearLayout.LayoutParams(0, host.dp(48), 1f).apply {
+                    setMargins(host.dp(2), host.dp(2), host.dp(2), host.dp(2))
+                })
             host.list.addView(row, LinearLayout.LayoutParams(-1, host.dp(52)))
         }
-        host.list.addView(command(host.tr("Remove selected clip", "Удалить выбранный фрагмент"), enabled) {
-            host.showConfirmPanel(
-                host.tr("Remove selected clip?", "Удалить выбранный фрагмент?"),
-                clip.title,
-                Runnable { controller.change { it.remove(clip.id) } },
-            )
-        })
     }
 
     private fun tool(icon: StrictIcon, label: String, enabled: Boolean, run: () -> Unit): Button =

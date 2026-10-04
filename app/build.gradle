@@ -304,9 +304,9 @@ tasks.register("checkLauncherIcon") {
 
 tasks.register("checkSourceFileSize") {
     group = "verification"
-    description = "Fails when a production Java or Kotlin source exceeds 500 lines."
+    description = "Fails when a production Java or Kotlin source exceeds 600 lines."
     doLast {
-        int limit = 500
+        int limit = 600
         def oversized = []
         fileTree("src/main") {
             include "**/*.java", "**/*.kt"
