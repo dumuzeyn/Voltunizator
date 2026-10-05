@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Trace
 import android.widget.ImageView
 import android.widget.LinearLayout
+import java.util.WeakHashMap
 import kotlin.math.roundToInt
 
 /** Owns artwork loading, visible artwork bindings, waveform creation, and memory trimming. */
@@ -27,6 +28,7 @@ internal class TrackArtworkUi(
     }
 
     private val coverLoader = CoverLoader(context, mainHandler)
+    private val requestedCoverSizes = WeakHashMap<ImageView, Int>()
     private val promoteVisible = Runnable(::promoteVisibleArtwork)
     private var groupPrefetchSignature = Long.MIN_VALUE
 
@@ -35,7 +37,7 @@ internal class TrackArtworkUi(
     }
 
     fun loadCover(view: ImageView, track: Track, fallbackColor: Int, maxSize: Int) {
-        registerCover(view, track)
+        registerCover(view, track, maxSize)
         if (dependencies.renderingPreview()) {
             coverLoader.loadCachedOnly(view, track, fallbackColor, maxSize)
         } else {
@@ -44,7 +46,7 @@ internal class TrackArtworkUi(
     }
 
     fun loadCoverSmooth(view: ImageView, track: Track, fallbackColor: Int) {
-        registerCover(view, track)
+        registerCover(view, track, CoverLoader.THUMB_SIZE)
         if (dependencies.renderingPreview()) {
             coverLoader.loadCachedOnly(view, track, fallbackColor, CoverLoader.THUMB_SIZE)
         } else {
@@ -93,7 +95,8 @@ internal class TrackArtworkUi(
                 }
                 dependencies.findTrack(uri)?.let { track ->
                     coverLoader.load(
-                        cover, track, dependencies.inactiveColor(), CoverLoader.THUMB_SIZE,
+                        cover, track, dependencies.inactiveColor(),
+                        requestedCoverSizes[cover] ?: CoverLoader.THUMB_SIZE,
                     )
                 }
             }
@@ -112,6 +115,7 @@ internal class TrackArtworkUi(
     }
 
     fun clearCover(view: ImageView, fallbackColor: Int) {
+        requestedCoverSizes.remove(view)
         coverLoader.clear(view, fallbackColor)
         if (view is RotatingCoverImageView) view.bindTrack(null)
     }
@@ -136,10 +140,12 @@ internal class TrackArtworkUi(
 
     override fun close() {
         mainHandler.removeCallbacks(promoteVisible)
+        requestedCoverSizes.clear()
         coverLoader.close()
     }
 
-    private fun registerCover(view: ImageView, track: Track?) {
+    private fun registerCover(view: ImageView, track: Track?, maxSize: Int) {
+        requestedCoverSizes[view] = maxSize
         if (view !is RotatingCoverImageView) return
         view.bindTrack(track)
         if (track != null) dependencies.activeRows().registerCover(track.uri, view)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.3.1
+
+- Kept vertical lyrics gestures inside the lyrics page, including clickable synchronized lines and gestures at the start of the text. Horizontal page navigation and header swipe dismissal remain available.
+- Preserved the requested artwork resolution during visible-cover refreshes and memory-cache reloads so full-player artwork is not replaced with a 160-pixel thumbnail.
+- Added Android regression tests for lyrics gesture ownership, page navigation, dismissal and full-resolution artwork retention.
+
 ## 4.3
 
 - Moved stem separation into a non-exported foreground service with a partial wake lock, progress notification, cancellation and a persisted request independent of Activity lifetime.

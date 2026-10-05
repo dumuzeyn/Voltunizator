@@ -28,17 +28,29 @@ internal class LyricsPageController(
     fun createView(): View {
         root?.let { return it }
         val createdRoot = FrameLayout(host)
-        val createdScroll = ScrollView(host).apply {
-            isFillViewport = true
-            isVerticalScrollBarEnabled = true
-            setOnTouchListener { _, event ->
+        val createdScroll = object : ScrollView(host) {
+            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    // Claim the gesture before a clickable synchronized lyric line receives it.
+                    var ancestor = parent
+                    while (ancestor != null) {
+                        if (ancestor is FullPlayerSheet) {
+                            ancestor.retainContentGesture()
+                            break
+                        }
+                        ancestor = ancestor.parent
+                    }
+                }
                 if (event.actionMasked == MotionEvent.ACTION_DOWN ||
                     event.actionMasked == MotionEvent.ACTION_MOVE
                 ) {
                     manualScrollUntil = System.currentTimeMillis() + MANUAL_SCROLL_GRACE_MS
                 }
-                false
+                return super.dispatchTouchEvent(event)
             }
+        }.apply {
+            isFillViewport = true
+            isVerticalScrollBarEnabled = true
         }
         val createdContent = LinearLayout(host).apply {
             orientation = LinearLayout.VERTICAL
