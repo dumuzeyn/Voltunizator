@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.3-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
+    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.3.1-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="Open English version">
@@ -31,7 +31,7 @@
 
 Voltunizator превращает музыку на телефоне в личную медиатеку. Приложение находит треки, продолжает играть в фоне, помнит очередь и позицию, а внешний вид можно настроить под себя. Для прослушивания не нужны интернет, регистрация или облачный сервис.
 
-**Версия 4.3.** Разделение аудио ускорено параллельной обработкой на подходящих устройствах и продолжает работать при выключенном экране. Добавлены точный ввод времени разделения и позиционирование фрагментов.
+**Версия 4.3.1.** Исправлены прокрутка текста песни и сохранение качества обложки в большом плеере. Разделение аудио продолжает работать при выключенном экране; редактор поддерживает точный ввод времени разделения и позиционирование фрагментов.
 
 <a id="screenshots"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Главная: продолжить прослушивание и быстрые очереди"><br><em>Главная и быстрые очереди</em></p>
@@ -272,7 +272,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Version_4.3-9b4dff?style=for-the-badge" alt="Download Voltunizator">
+    <img src="https://img.shields.io/badge/Download_APK-Version_4.3.1-9b4dff?style=for-the-badge" alt="Download Voltunizator">
   </a>
   <a href="#russian">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Открыть русскую версию">
@@ -287,7 +287,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 Voltunizator turns locally stored music into a personal library. It finds tracks quickly, keeps playing in the background, remembers the queue and position, and offers visual customization. Playback requires no internet connection, account, or cloud service. Screenshots appear beside the features they show.
 
-**Version 4.3.** Stem separation uses parallel processing on suitable devices and continues with the screen off. The editor also supports exact split timecodes and clip positioning.
+**Version 4.3.1.** Fixed lyrics scrolling and artwork quality retention in the full player. Stem separation continues with the screen off; the editor supports exact split timecodes and clip positioning.
 
 <a id="screenshots-en"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Home screen with listening continuity and quick queues"><br><em>Home and quick queues</em></p>

@@ -17,9 +17,14 @@ internal class FullPlayerSheet(
 
     private var draggingDown = false
     private var closingDown = false
+    private var contentGesture = false
     private var startX = 0f
     private var startY = 0f
     private var startTranslationY = 0f
+
+    fun retainContentGesture() {
+        contentGesture = true
+    }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         return when (val action = event.actionMasked) {
@@ -41,6 +46,7 @@ internal class FullPlayerSheet(
     private fun beginGesture(event: MotionEvent) {
         draggingDown = false
         closingDown = false
+        contentGesture = false
         startX = event.rawX
         startY = event.rawY
         startTranslationY = translationY
@@ -52,7 +58,7 @@ internal class FullPlayerSheet(
         if (closingDown) return true
         val dx = event.rawX - startX
         val dy = event.rawY - startY
-        if (!draggingDown && dy > host.dp(8) && dy > abs(dx) * 0.75f) {
+        if (!contentGesture && !draggingDown && dy > host.dp(8) && dy > abs(dx) * 0.75f) {
             draggingDown = true
             MotionEvent.obtain(event).also { cancelEvent ->
                 cancelEvent.action = MotionEvent.ACTION_CANCEL

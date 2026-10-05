@@ -144,7 +144,9 @@ public class LibraryExperienceUiInstrumentedTest {
             host.switchTabAnimated(LibraryTabs.SONGS, 1);
         });
         InstrumentedTestSupport.waitFor("Songs tab did not open", 5000L,
-                () -> host.navigationState.tabIndex == LibraryTabs.SONGS);
+                () -> host.navigationState.tabIndex == LibraryTabs.SONGS
+                        && !host.navigationState.tabAnimating
+                        && host.songsView.findViewById(R.id.song_card) != null);
         assertLibraryCardSize(host.songsView.findViewById(R.id.song_card),
                 libraryCardWidth, libraryCardHeight);
         assertTrue(host.libraryState.favorites.contains(track.uri));

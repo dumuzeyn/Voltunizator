@@ -1,3 +1,15 @@
+# Voltunizator 4.3.1
+
+- Исправлена прокрутка текста песни в большом плеере: вертикальные жесты внутри текста больше не закрывают плеер, в том числе на строках синхронизированного текста. Горизонтальное переключение страниц и закрытие свайпом по заголовку сохранены.
+- Исправлено периодическое ухудшение качества обложки: обновление видимых обложек сохраняет разрешение большого плеера вместо замены миниатюрой.
+- Добавлены проверки жестов, переключения страниц и сохранения качества обложки после очистки кеша памяти.
+
+## English
+
+- Fixed lyrics scrolling in the full player, including clickable synchronized lines. Vertical gestures stay inside the lyrics page; horizontal navigation and header swipe dismissal remain available.
+- Fixed intermittent full-player artwork degradation: visible-cover refreshes preserve the requested full resolution instead of replacing it with a thumbnail.
+- Added regression coverage for gestures, page navigation and artwork quality after memory-cache eviction.
+
 # Voltunizator 4.3
 
 - Разделение на дорожки выполняется отдельной фоновой службой с уведомлением о прогрессе и отменой. Закрытие редактора и выключение экрана больше не отменяют обработку.
