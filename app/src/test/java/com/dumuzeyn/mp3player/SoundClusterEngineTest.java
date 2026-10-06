@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,6 +13,72 @@ import java.util.Random;
 import org.junit.Test;
 
 public class SoundClusterEngineTest {
+    @Test
+    public void distinctPairsAreNotForcedIntoFewerAlbums() {
+        ArrayList<TrackAudioProfile> profiles = new ArrayList<>();
+        Random random = new Random(42);
+        for (int family = 0; family < 40; family++) {
+            double[] features = new double[TrackAudioProfile.FEATURE_COUNT];
+            for (int feature = 0; feature < features.length; feature++) {
+                features[feature] = random.nextGaussian();
+            }
+            profiles.add(profile("pair-" + family + "-a", features));
+            profiles.add(profile("pair-" + family + "-b", features));
+        }
+        ArrayList<SoundGroup> groups = new SoundClusterEngine().cluster(profiles);
+        assertEquals(40, groups.size());
+        for (SoundGroup group : groups) assertEquals(2, group.trackIds.size());
+    }
+
+    @Test
+    public void isolatedOutlierDoesNotGetAttachedToDenseFamily() {
+        ArrayList<TrackAudioProfile> profiles = new ArrayList<>();
+        for (int index = 0; index < 40; index++) profiles.add(profile("dense-" + index, values(4)));
+        double[] outlier = values(4);
+        for (int feature = 1; feature < outlier.length; feature++) outlier[feature] += 100;
+        profiles.add(profile("outlier", outlier));
+        ArrayList<SoundGroup> groups = new SoundClusterEngine().cluster(profiles);
+        assertEquals(2, groups.size());
+        for (SoundGroup group : groups) {
+            if (group.trackIds.contains("outlier")) assertEquals(1, group.trackIds.size());
+        }
+    }
+
+    @Test
+    public void gradualChainCannotBridgeDissimilarEnds() {
+        ArrayList<TrackAudioProfile> profiles = new ArrayList<>();
+        for (int index = 0; index < 100; index++) {
+            double[] features = new double[TrackAudioProfile.FEATURE_COUNT];
+            Arrays.fill(features, index / 100.0);
+            profiles.add(profile(String.format(java.util.Locale.ROOT, "chain-%03d", index), features));
+        }
+        SoundFeatureNormalizer.Result normalized = SoundFeatureNormalizer.normalize(profiles);
+        Map<String, double[]> vectors = new HashMap<>();
+        for (int index = 0; index < profiles.size(); index++) {
+            vectors.put(profiles.get(index).trackId, normalized.vectors.get(index));
+        }
+        for (SoundGroup group : new SoundClusterEngine().cluster(profiles)) {
+            for (String first : group.trackIds) for (String second : group.trackIds) {
+                assertTrue("A similarity chain merged distant tracks", SoundFeatureNormalizer.distance(
+                        vectors.get(first), vectors.get(second)) <= 0.35000001);
+            }
+        }
+    }
+
+    @Test
+    public void incrementalAssignmentRejectsDistantTrackAndIgnoresStaleCentroid() {
+        ArrayList<TrackAudioProfile> profiles = fourFamilies(10);
+        SoundClusterEngine engine = new SoundClusterEngine();
+        ArrayList<SoundGroup> groups = engine.cluster(profiles);
+        double[] candidate = profiles.get(0).features.clone();
+        String expected = engine.nearestGroup(candidate, profiles, groups);
+        assertFalse(expected.isEmpty());
+        for (SoundGroup group : groups) Arrays.fill(group.centroid, 10000);
+        assertEquals(expected, engine.nearestGroup(candidate, profiles, groups));
+        Arrays.fill(candidate, 1000);
+        assertEquals("", engine.nearestGroup(candidate, profiles, groups));
+    }
+
     @Test
     public void emptyAndSmallLibrariesStayUngrouped() {
         SoundClusterEngine engine = new SoundClusterEngine();

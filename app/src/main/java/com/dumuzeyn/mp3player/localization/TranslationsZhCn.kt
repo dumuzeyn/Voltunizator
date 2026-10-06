@@ -2,6 +2,13 @@ package com.dumuzeyn.mp3player.localization
 
 internal object TranslationsZhCn {
     val entries: Map<String, String> = mapOf(
+        "Random queue" to "随机队列",
+        "Similar queue" to "相似队列",
+        "Recent listens" to "最近听过",
+        "Long unplayed" to "很久未听",
+        "Queue mode" to "队列模式",
+        "Queue size" to "队列数量",
+        "No listening history yet" to "暂无播放历史",
         " s" to "s",
         " · cancelled" to "· 取消",
         " · errors: " to "· 错误：",

@@ -2,6 +2,13 @@ package com.dumuzeyn.mp3player.localization
 
 internal object TranslationsId {
     val entries: Map<String, String> = mapOf(
+        "Random queue" to "Antrean acak",
+        "Similar queue" to "Lagu serupa",
+        "Recent listens" to "Baru didengarkan",
+        "Long unplayed" to "Lama tak didengar",
+        "Queue mode" to "Mode antrean",
+        "Queue size" to "Jumlah lagu",
+        "No listening history yet" to "Belum ada riwayat dengar",
         " s" to "s",
         " · cancelled" to "· dibatalkan",
         " · errors: " to "· kesalahan:",

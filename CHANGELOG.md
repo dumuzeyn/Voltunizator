@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.3.2
+
+- Replaced separate random/similar Home buttons with one persistent four-mode queue action and a long-press picker, preserving the count wheel.
+- Added newest-first recent-listening and oldest-first long-unplayed queues with an empty-history safeguard.
+- Removed unconditional small-group and group-count merges from audio clustering, bounded within-group pairwise distance, and checked incremental assignments against current normalized group members.
+- Bumped clustering version to rebuild saved groups without reanalyzing audio; added queue/history, cohesion, migration and UI regression tests and localized labels.
+
 ## 4.3.1
 
 - Kept vertical lyrics gestures inside the lyrics page, including clickable synchronized lines and gestures at the start of the text. Horizontal page navigation and header swipe dismissal remain available.

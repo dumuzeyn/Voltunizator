@@ -5,6 +5,18 @@ import java.util.Random
 
 object QueueTransformations {
     @JvmStatic
+    fun historySubset(source: List<Track>, requestedCount: Int, recentFirst: Boolean): ArrayList<Track> {
+        val candidates = source.distinctBy { it.trackId }
+            .filter { !recentFirst || it.lastPlayedAt > 0L }
+            .sortedWith(
+                (if (recentFirst) compareByDescending<Track> { it.lastPlayedAt }
+                else compareBy<Track> { it.lastPlayedAt }).thenBy { it.trackId },
+            )
+        if (candidates.isEmpty()) return ArrayList()
+        return ArrayList(candidates.take(requestedCount.coerceIn(1, candidates.size)))
+    }
+
+    @JvmStatic
     fun <T> move(source: List<T>, from: Int, to: Int): ArrayList<T> =
         ArrayList(source).apply {
             if (from in indices && to in indices && from != to) add(to, removeAt(from))

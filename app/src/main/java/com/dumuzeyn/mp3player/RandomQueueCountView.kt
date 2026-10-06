@@ -15,9 +15,6 @@ import kotlin.math.abs
 internal class RandomQueueCountView(
     private val host: MainActivityCore,
     maximum: Int,
-    private val kindEnglish: String = "random",
-    private val kindRussian: String = "случайной",
-    viewId: Int = R.id.random_queue_count,
 ) : FrameLayout(host) {
     private val maximum = maximum.coerceAtLeast(1)
     private val stepDistance = host.dp(12).toFloat()
@@ -35,7 +32,7 @@ internal class RandomQueueCountView(
         private set
 
     init {
-        id = viewId
+        id = R.id.random_queue_count
         background = host.uiFactory.cardBackground(host.appearanceState.cardOpacity)
         TextOutlinePolicy.markCardSurface(this, true)
         addView(label, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -134,12 +131,7 @@ internal class RandomQueueCountView(
 
     private fun updateLabel() {
         label.text = value.toString()
-        contentDescription = host.tr(
-            "${kindEnglish.replaceFirstChar(Char::uppercase)} queue size: $value of $maximum. " +
-                "Swipe up or down to change it.",
-            "Размер $kindRussian очереди: $value из $maximum. " +
-                "Проведите вверх или вниз для изменения.",
-        )
+        contentDescription = host.tr("Queue size", "Размер очереди") + ": $value / $maximum"
     }
 
     private fun animateLabel(direction: Float) {

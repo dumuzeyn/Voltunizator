@@ -3,6 +3,7 @@ package com.dumuzeyn.mp3player;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -111,14 +112,12 @@ public class LibraryExperienceUiInstrumentedTest {
         InstrumentedTestSupport.waitFor("Random queue has the wrong size", 5000L,
                 () -> host.playbackUiState.queue.size() == randomCount.getValue());
 
-        Button similarQueue = host.list.findViewById(R.id.similar_queue_button);
-        RandomQueueCountView similarCount = host.list.findViewById(R.id.similar_queue_count);
-        assertNotNull(similarQueue);
-        assertNotNull(similarCount);
-        instrumentation.runOnMainSync(similarCount::performClick);
-        instrumentation.runOnMainSync(similarQueue::performClick);
+        assertNull(host.list.findViewById(R.id.similar_queue_button));
+        assertNull(host.list.findViewById(R.id.similar_queue_count));
+        chooseQueueMode(host, randomQueue, QueueCreationMode.SIMILAR);
+        instrumentation.runOnMainSync(randomQueue::performClick);
         InstrumentedTestSupport.waitFor("Similar queue has the wrong size", 5000L,
-                () -> host.playbackUiState.queue.size() == similarCount.getValue());
+                () -> host.playbackUiState.queue.size() == randomCount.getValue());
 
         assertOverlayOpens(host, host.overlayController::openSearch);
         assertOverlayOpens(host, host.overlayController::openQueue);
@@ -230,14 +229,14 @@ public class LibraryExperienceUiInstrumentedTest {
     public void homeSongsRemainSelectableAfterGeneratedQueues() {
         MainActivityCore host = launchWithLibrary(true);
         Button randomQueue = host.list.findViewById(R.id.random_queue_button);
-        Button similarQueue = host.list.findViewById(R.id.similar_queue_button);
         assertNotNull(randomQueue);
-        assertNotNull(similarQueue);
+        assertNull(host.list.findViewById(R.id.similar_queue_button));
         assertEquals("Home needs no mini-player clearance before playback", null,
                 host.list.findViewWithTag("mini-player-spacer"));
 
-        for (Button create : new Button[] {randomQueue, similarQueue}) {
-            instrumentation.runOnMainSync(create::performClick);
+        for (QueueCreationMode mode : QueueCreationMode.values()) {
+            chooseQueueMode(host, randomQueue, mode);
+            instrumentation.runOnMainSync(randomQueue::performClick);
             InstrumentedTestSupport.waitFor("Generated queue did not start", 5000L,
                     () -> !host.playbackUiState.queue.isEmpty());
             InstrumentedTestSupport.waitFor("Home did not reserve space for the mini-player", 5000L,
@@ -572,6 +571,15 @@ public class LibraryExperienceUiInstrumentedTest {
                         && !host.navigationState.tabAnimating);
     }
 
+    private void chooseQueueMode(MainActivityCore host, Button button, QueueCreationMode mode) {
+        instrumentation.runOnMainSync(button::performLongClick);
+        String label = host.tr(mode.getEnglish(), mode.getRussian());
+        InstrumentedTestSupport.waitFor("Queue mode picker did not open", 5000L,
+                () -> findText(host.overlayHost, Button.class, label) != null);
+        instrumentation.runOnMainSync(() -> findText(host.overlayHost, Button.class, label).performClick());
+        assertEquals(label, button.getText().toString());
+    }
+
     private void applyPlaybackState(MainActivityCore host, Track track, boolean playing) {
         instrumentation.runOnMainSync(() -> {
             String mediaId = MediaItemMapper.stableHash(track.uri);
@@ -776,6 +784,7 @@ public class LibraryExperienceUiInstrumentedTest {
                 .putString("language", "ru")
                 .putBoolean("animations", true)
                 .putBoolean("particlesEnabled", false)
+                .putString(QueueCreationMode.PREFERENCE, QueueCreationMode.RANDOM.name())
                 .putInt("playlistTickerSpeed", 200)
                 .commit();
         ArrayList<Track> tracks = new ArrayList<>();
@@ -794,11 +803,12 @@ public class LibraryExperienceUiInstrumentedTest {
                 }
                 uri = Uri.fromFile(file).toString();
             }
-            tracks.add(new Track(uri,
+            Track fixture = new Track(uri,
                     "UI song " + index,
                     playable ? "Unknown artist" : "UI artist",
                     playable ? "Unknown album" : "UI album",
-                    "UI genre", 180000));
+                    "UI genre", 180000);
+            tracks.add(playable ? fixture.withPlaybackStats(1, 0, index + 1L, 0L) : fixture);
         }
         TrackStore.save(context, tracks);
         Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(

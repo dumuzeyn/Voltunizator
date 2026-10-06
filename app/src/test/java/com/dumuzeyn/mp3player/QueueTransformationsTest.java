@@ -2,6 +2,7 @@ package com.dumuzeyn.mp3player;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -10,6 +11,35 @@ import java.util.Random;
 import org.junit.Test;
 
 public class QueueTransformationsTest {
+    @Test
+    public void recentHistoryUsesNewestFirstAndNeverFillsWithUnplayedTracks() {
+        Track oldest = history("old", 100);
+        Track newest = history("new", 300);
+        Track middle = history("middle", 200);
+        Track unplayed = history("unplayed", 0);
+        List<Track> source = Arrays.asList(oldest, newest, unplayed, middle, newest);
+        assertEquals(Arrays.asList(newest, middle), QueueTransformations.historySubset(source, 2, true));
+        assertEquals(Arrays.asList(newest, middle, oldest), QueueTransformations.historySubset(source, 99, true));
+        assertEquals(Arrays.asList(oldest, newest, unplayed, middle, newest), source);
+    }
+
+    @Test
+    public void oldestHistoryPrioritizesUnplayedThenLeastRecentTracks() {
+        Track oldest = history("old", 100);
+        Track newest = history("new", 300);
+        Track unplayed = history("unplayed", 0);
+        assertEquals(Arrays.asList(unplayed, oldest),
+                QueueTransformations.historySubset(Arrays.asList(newest, oldest, unplayed), 2, false));
+        assertEquals(Arrays.asList(unplayed),
+                QueueTransformations.historySubset(Arrays.asList(newest, oldest, unplayed), 0, false));
+        assertTrue(QueueTransformations.historySubset(Arrays.asList(unplayed), 10, true).isEmpty());
+    }
+
+    private static Track history(String id, long timestamp) {
+        return new Track(id, "content://history/" + id, id, "Artist", "Album", "", 1000, 10, 0, "")
+                .withPlaybackStats(timestamp > 0 ? 1 : 0, 0, timestamp, 0);
+    }
+
     @Test
     public void moveKeepsEveryElement() {
         assertEquals(Arrays.asList("b", "c", "a"),

@@ -1,3 +1,17 @@
+# Voltunizator 4.3.2
+
+- На главном экране осталась одна кнопка создания очереди. Удержание открывает четыре режима: «Случайная очередь», «Похожая очередь», «Недавно слушали», «Давно не слушали». Выбранный режим запоминается; счётчик количества песен сохранён.
+- Недавно прослушанные песни идут от новых к старым; в режиме «Давно не слушали» первыми идут ещё не прослушанные, затем давно не включавшиеся песни. Пустая история не сбрасывает текущую очередь.
+- Тематические альбомы больше не объединяются принудительно ради количества групп. Сходство проверяется со всеми участниками группы; новые непохожие треки не присоединяются к ближайшему альбому автоматически.
+- Существующие группы пересобираются из сохранённых аудиопрофилей без повторного анализа файлов. Подписи новых режимов переведены на все поддерживаемые языки.
+
+## English
+
+- Home now has one queue button. Long-press it to select Random queue, Similar queue, Recent listens or Long unplayed. The selected mode is remembered and the song-count wheel remains available.
+- History queues use newest-first or oldest-first listening order; unplayed tracks lead the latter. Empty recent history does not replace the active queue.
+- Thematic albums no longer merge unrelated outliers or exceed a similarity bound just to reduce the number of groups. New tracks must match all group members; persisted groups are rebuilt from saved profiles without rescanning audio.
+- Added translations and regression coverage for queue modes, history ordering and coherent audio grouping.
+
 # Voltunizator 4.3.1
 
 - Исправлена прокрутка текста песни в большом плеере: вертикальные жесты внутри текста больше не закрывают плеер, в том числе на строках синхронизированного текста. Горизонтальное переключение страниц и закрытие свайпом по заголовку сохранены.

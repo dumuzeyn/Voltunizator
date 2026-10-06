@@ -56,7 +56,9 @@ internal object SoundGroupNamer {
                 )
             }
         }
-        return Candidate("Звуковой поток", "Sound flow", 0.0)
+        var number = 1
+        while ("Звуковой поток $number" in used) number++
+        return Candidate("Звуковой поток $number", "Sound flow $number", 0.0)
     }
 
     private fun candidates(centroid: DoubleArray): ArrayList<Candidate> {
