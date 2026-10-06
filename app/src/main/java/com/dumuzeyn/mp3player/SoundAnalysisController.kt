@@ -207,7 +207,7 @@ internal class SoundAnalysisController(private val host: MainActivityCore) : Clo
         publishCounts(tracks.size, profiles, pending.size)
         notifyUi()
         if (!enabled()) return
-        if (clusteringChanged && pending.isEmpty() && usableCount(profiles) >= 4) {
+        if (clusteringChanged && usableCount(profiles) >= 4) {
             rebuildGroups(profiles)
             clusteringChanged = false
         }
@@ -304,6 +304,10 @@ internal class SoundAnalysisController(private val host: MainActivityCore) : Clo
                 ArrayList(profiles.values),
                 groups,
             )
+            if (groupId.isEmpty()) {
+                rebuildGroups(profiles)
+                return
+            }
             requireNotNull(store).assign(profile.trackId, groupId)
             groups = requireNotNull(store).loadGroups()
         }

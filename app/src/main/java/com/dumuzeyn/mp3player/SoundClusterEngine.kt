@@ -3,13 +3,10 @@ package com.dumuzeyn.mp3player
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.Locale
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
-/** Adaptive clustering restored from the last pre-KMeans implementation. */
+/** Adaptive audio grouping with a bounded pairwise diameter and no forced outlier merges. */
 internal class SoundClusterEngine {
     fun cluster(source: List<TrackAudioProfile?>?): ArrayList<SoundGroup> {
         val profiles = usableProfiles(source)
@@ -25,9 +22,6 @@ internal class SoundClusterEngine {
                 threshold,
             )
         }
-        mergeSmallClusters(clusters, max(2, (sqrt(profiles.size.toDouble()) / 4.0).roundToInt()))
-        val adaptiveMaximum = max(2, ceil(sqrt(profiles.size.toDouble())).toInt())
-        while (clusters.size > adaptiveMaximum) mergeClosestPair(clusters)
         val groups = ArrayList<SoundGroup>()
         for (cluster in clusters) {
             cluster.trackIds.sort()
@@ -59,10 +53,21 @@ internal class SoundClusterEngine {
         if (usable.isEmpty()) return ""
         val normalization = SoundFeatureNormalizer.normalize(usable)
         val vector = normalization.vector(rawFeatures)
+        val threshold = adaptiveThreshold(normalization.vectors)
+        val byId = usable.indices.associate { usable[it].trackId to normalization.vectors[it] }
         var nearest: SoundGroup? = null
         var distance = Double.POSITIVE_INFINITY
         for (group in groups) {
-            val current = SoundFeatureNormalizer.distance(vector, group.centroid)
+            val members = group.trackIds.mapNotNull(byId::get)
+            if (members.isEmpty() || members.any {
+                    SoundFeatureNormalizer.distance(vector, it) > threshold
+                }) continue
+            // Stored centroids use the previous library's scaling; recompute in the current space.
+            val centroid = DoubleArray(TrackAudioProfile.FEATURE_COUNT)
+            members.forEach { member ->
+                centroid.indices.forEach { centroid[it] += member[it] / members.size }
+            }
+            val current = SoundFeatureNormalizer.distance(vector, centroid)
             if (current < distance) {
                 distance = current
                 nearest = group
@@ -73,30 +78,24 @@ internal class SoundClusterEngine {
 
     private class MutableCluster(trackId: String, vector: DoubleArray) {
         val trackIds = arrayListOf(trackId)
+        val members = arrayListOf(vector)
         var centroid = vector.clone()
 
         fun add(trackId: String, vector: DoubleArray) {
             val previous = trackIds.size
             trackIds.add(trackId)
+            members.add(vector)
             for (index in centroid.indices) {
                 centroid[index] = (centroid[index] * previous + vector[index]) / (previous + 1)
             }
         }
 
-        fun merge(other: MutableCluster) {
-            val ownSize = trackIds.size
-            val otherSize = other.trackIds.size
-            val total = ownSize + otherSize
-            for (index in centroid.indices) {
-                centroid[index] =
-                    (centroid[index] * ownSize + other.centroid[index] * otherSize) / total
-            }
-            trackIds.addAll(other.trackIds)
-        }
+        fun accepts(vector: DoubleArray, threshold: Double): Boolean =
+            members.all { SoundFeatureNormalizer.distance(vector, it) <= threshold }
     }
 
     companion object {
-        const val CLUSTERING_VERSION = 3
+        const val CLUSTERING_VERSION = 4
         private const val MIN_LIBRARY_SIZE = 4
         private const val DISTANCE_SAMPLE_LIMIT = 256
 
@@ -115,14 +114,16 @@ internal class SoundClusterEngine {
 
         private fun adaptiveThreshold(vectors: List<DoubleArray>): Double {
             val count = min(vectors.size, DISTANCE_SAMPLE_LIMIT)
+            if (count < 2) return 0.35
             val nearest = ArrayList<Double>()
+            val sampled = (0 until count).map { vectors[it * (vectors.size - 1) / (count - 1)] }
             for (left in 0 until count) {
                 var best = Double.POSITIVE_INFINITY
                 for (right in 0 until count) {
                     if (left != right) {
                         best = min(
                             best,
-                            SoundFeatureNormalizer.distance(vectors[left], vectors[right]),
+                            SoundFeatureNormalizer.distance(sampled[left], sampled[right]),
                         )
                     }
                 }
@@ -143,7 +144,7 @@ internal class SoundClusterEngine {
             var distance = Double.POSITIVE_INFINITY
             for (cluster in clusters) {
                 val current = SoundFeatureNormalizer.distance(vector, cluster.centroid)
-                if (current < distance) {
+                if (current < distance && current <= threshold && cluster.accepts(vector, threshold)) {
                     distance = current
                     nearest = cluster
                 }
@@ -153,61 +154,6 @@ internal class SoundClusterEngine {
             } else {
                 nearest.add(trackId, vector)
             }
-        }
-
-        private fun mergeSmallClusters(clusters: ArrayList<MutableCluster>, minimum: Int) {
-            var changed = true
-            while (changed && clusters.size > 1) {
-                changed = false
-                for (index in clusters.indices) {
-                    val small = clusters[index]
-                    if (small.trackIds.size >= minimum) continue
-                    val nearest = nearestClusterIndex(clusters, index)
-                    if (nearest >= 0) {
-                        clusters[nearest].merge(small)
-                        clusters.removeAt(index)
-                        changed = true
-                        break
-                    }
-                }
-            }
-        }
-
-        private fun mergeClosestPair(clusters: ArrayList<MutableCluster>) {
-            var bestLeft = 0
-            var bestRight = 1
-            var best = Double.POSITIVE_INFINITY
-            for (left in clusters.indices) {
-                for (right in left + 1 until clusters.size) {
-                    val distance = SoundFeatureNormalizer.distance(
-                        clusters[left].centroid,
-                        clusters[right].centroid,
-                    )
-                    if (distance < best) {
-                        best = distance
-                        bestLeft = left
-                        bestRight = right
-                    }
-                }
-            }
-            clusters[bestLeft].merge(clusters.removeAt(bestRight))
-        }
-
-        private fun nearestClusterIndex(clusters: ArrayList<MutableCluster>, source: Int): Int {
-            var nearest = -1
-            var best = Double.POSITIVE_INFINITY
-            for (index in clusters.indices) {
-                if (index == source) continue
-                val distance = SoundFeatureNormalizer.distance(
-                    clusters[source].centroid,
-                    clusters[index].centroid,
-                )
-                if (distance < best) {
-                    best = distance
-                    nearest = index
-                }
-            }
-            return nearest
         }
 
         private fun stableId(trackIds: List<String>): String {

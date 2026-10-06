@@ -1,5 +1,6 @@
 package com.dumuzeyn.mp3player
 
+import android.widget.Toast
 import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager
 import java.util.Collections
 import java.util.Random
@@ -28,10 +29,27 @@ class PlaybackQueueController(
         if (queue.isNotEmpty()) playback.submitQueue(queue, 0, 0, host.repeatMode(), true)
     }
 
+    internal fun playGenerated(mode: QueueCreationMode, count: Int) {
+        when (mode) {
+            QueueCreationMode.RANDOM -> playRandom(count)
+            QueueCreationMode.SIMILAR -> playSimilar(count)
+            QueueCreationMode.RECENT, QueueCreationMode.OLDEST -> {
+                val queue = QueueTransformations.historySubset(
+                    host.libraryState.tracks, count, mode == QueueCreationMode.RECENT,
+                )
+                if (queue.isNotEmpty()) {
+                    playback.submitQueue(queue, 0, 0, host.repeatMode(), true)
+                } else {
+                    Toast.makeText(host, host.tr("No listening history yet", "История прослушивания пуста"),
+                        Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     fun playSimilar(count: Int) {
         val tracks = host.libraryState.tracks
         val seed = tracks.getOrNull(host.currentTrackIndex())
-            ?: host.libraryState.homeContent.recentlyPlayed.firstOrNull()
             ?: tracks.takeIf { it.isNotEmpty() }?.let { it[Random().nextInt(it.size)] }
         val preferred = similarCandidates(seed, tracks)
         val queue = QueueTransformations.similarSubset(tracks, seed, preferred, count)
@@ -180,7 +198,8 @@ class PlaybackQueueController(
             ?.toHashSet()
             .orEmpty()
         return tracks.filterTo(LinkedHashSet()) { track ->
-            track.trackId in groupTrackIds || metadataMatches(seed, track)
+            if (groupTrackIds.isNotEmpty()) track.trackId in groupTrackIds
+            else metadataMatches(seed, track)
         }
     }
 
