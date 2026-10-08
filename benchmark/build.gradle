@@ -41,5 +41,5 @@ dependencies {
     implementation "androidx.benchmark:benchmark-macro-junit4:1.4.1"
     implementation "androidx.profileinstaller:profileinstaller:1.4.1"
     implementation "androidx.startup:startup-runtime:1.2.0"
-    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
+    compileOnly "com.google.errorprone:error_prone_annotations:2.50.0"
 }
