@@ -11,6 +11,7 @@ class PlaybackQueueController(
     private val playback: PlaybackController,
 ) {
     private val mutations = LibraryMutationController(host)
+    private val previousGenerated = HashMap<QueueCreationMode, List<Track>>()
 
     fun playTrack(track: Track?) {
         val current = track?.let { PlaybackQueueResolver.find(host.libraryState.tracks, it) } ?: return
@@ -26,7 +27,7 @@ class PlaybackQueueController(
 
     fun playRandom(count: Int) {
         val queue = QueueTransformations.randomSubset(host.libraryState.tracks, count)
-        if (queue.isNotEmpty()) playback.submitQueue(queue, 0, 0, host.repeatMode(), true)
+        submitGenerated(QueueCreationMode.RANDOM, queue, host.libraryState.tracks)
     }
 
     internal fun playGenerated(mode: QueueCreationMode, count: Int) {
@@ -34,11 +35,13 @@ class PlaybackQueueController(
             QueueCreationMode.RANDOM -> playRandom(count)
             QueueCreationMode.SIMILAR -> playSimilar(count)
             QueueCreationMode.RECENT, QueueCreationMode.OLDEST -> {
-                val queue = QueueTransformations.historySubset(
+                val queue = QueueTransformations.historySample(
                     host.libraryState.tracks, count, mode == QueueCreationMode.RECENT,
                 )
                 if (queue.isNotEmpty()) {
-                    playback.submitQueue(queue, 0, 0, host.repeatMode(), true)
+                    submitGenerated(mode, queue, host.libraryState.tracks.filter {
+                        mode == QueueCreationMode.OLDEST || it.lastPlayedAt > 0L
+                    })
                 } else {
                     Toast.makeText(host, host.tr("No listening history yet", "История прослушивания пуста"),
                         Toast.LENGTH_SHORT).show()
@@ -53,7 +56,15 @@ class PlaybackQueueController(
             ?: tracks.takeIf { it.isNotEmpty() }?.let { it[Random().nextInt(it.size)] }
         val preferred = similarCandidates(seed, tracks)
         val queue = QueueTransformations.similarSubset(tracks, seed, preferred, count)
-        if (queue.isNotEmpty()) playback.submitQueue(queue, 0, 0, host.repeatMode(), true)
+        val pool = if (preferred.size >= queue.size) preferred.toList() else tracks
+        submitGenerated(QueueCreationMode.SIMILAR, queue, pool, true)
+    }
+
+    private fun submitGenerated(mode: QueueCreationMode, queue: List<Track>, candidates: List<Track>, keepFirst: Boolean = false) {
+        if (queue.isEmpty()) return
+        val fresh = QueueTransformations.freshQueue(queue, previousGenerated[mode].orEmpty(), candidates, keepFirst)
+        previousGenerated[mode] = fresh.toList()
+        playback.submitQueue(fresh, 0, 0, host.repeatMode(), true)
     }
 
     fun toggleOrStart() {

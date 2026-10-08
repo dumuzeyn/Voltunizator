@@ -2,7 +2,7 @@ package com.dumuzeyn.mp3player
 
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -42,10 +42,15 @@ internal object CoverShapeGeometry {
         }
     }
 
-    fun rotationFitScale(shape: String, degrees: Float): Float {
-        if (shape == "circle") return 1f
-        val radians = degrees * PI / 180.0
-        val extent = abs(cos(radians)) + abs(sin(radians))
-        return min(1.0, 0.995 / extent).toFloat()
+    fun rotationFitScale(shape: String, width: Float, height: Float): Float {
+        if (width <= 0f || height <= 0f) return 1f
+        val radius = when (shape) {
+            "circle", "diamond" -> maxOf(width, height) / 2f
+            "hexagon", "triangle", "star" -> vertices(shape, width, height)
+                .maxOf { hypot(it.first - width / 2f, it.second - height / 2f) }
+            else -> hypot(width / 2f, height / 2f)
+        }
+        // A fixed bounding circle fits at every angle, so rotation never pulses in size.
+        return min(1f, min(width, height) / (2f * radius))
     }
 }

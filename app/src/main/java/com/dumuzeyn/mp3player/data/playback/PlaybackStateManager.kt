@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.dumuzeyn.mp3player.MiniPlayerRetentionPolicy
 import com.dumuzeyn.mp3player.PlaybackSnapshot
+import com.dumuzeyn.mp3player.PauseReason
 import com.dumuzeyn.mp3player.QueueRemovalPlan
 import com.dumuzeyn.mp3player.RepeatModeMapper
 import com.dumuzeyn.mp3player.Track
@@ -144,7 +145,7 @@ class PlaybackStateManager(context: Context) {
         durationMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
         currentIndex,
         RepeatModeMapper.fromMedia3(repeatMode),
-        MiniPlayerRetentionPolicy.isPlaybackActive(playWhenReady, phase, stopReason),
+        pauseReason == PauseReason.TRACK_GAP || MiniPlayerRetentionPolicy.isPlaybackActive(playWhenReady, phase, stopReason),
         shuffleEnabled,
         queueIds,
     )

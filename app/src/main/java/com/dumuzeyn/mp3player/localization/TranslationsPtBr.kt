@@ -2,6 +2,8 @@ package com.dumuzeyn.mp3player.localization
 
 internal object TranslationsPtBr {
     val entries: Map<String, String> = mapOf(
+        "Between songs: " to "Entre músicas: ",
+        "Delay between songs" to "Pausa entre músicas",
         "Random queue" to "Fila aleatória",
         "Similar queue" to "Fila semelhante",
         "Recent listens" to "Ouvidas recentemente",

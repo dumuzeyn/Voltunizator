@@ -61,6 +61,7 @@ public class BackgroundPlaybackInstrumentedTest {
                 .putBoolean("particlesEnabled", false)
                 .putBoolean("animations", false)
                 .putBoolean("showArtistName", true)
+                .remove(InterTrackDelayPolicy.SECONDS)
                 .commit();
         if (Build.VERSION.SDK_INT >= 33) {
             InstrumentedTestSupport.runShellCommand(instrumentation,
@@ -86,6 +87,12 @@ public class BackgroundPlaybackInstrumentedTest {
     @After
     public void tearDown() {
         stopPlayback();
+        context.getSharedPreferences(InterTrackDelayPolicy.PREFS, 0).edit()
+                .remove(InterTrackDelayPolicy.SECONDS).commit();
+        try {
+            InstrumentedTestSupport.runShellCommand(instrumentation, "input keyevent 224");
+            InstrumentedTestSupport.runShellCommand(instrumentation, "wm dismiss-keyguard");
+        } catch (Exception error) { throw new AssertionError(error); }
         TrackStore.save(context, Collections.<Track>emptyList());
         if (activity != null) {
             InstrumentedTestSupport.finishActivity(instrumentation, activity);
@@ -292,6 +299,103 @@ public class BackgroundPlaybackInstrumentedTest {
             controller.prepare();
             controller.play();
         });
+    }
+
+    @Test
+    public void gapSettingDefaultsToZeroAndAcceptsFiveMinutes() {
+        activity = launchMainActivity();
+        MainActivityCore host = (MainActivityCore) activity;
+        instrumentation.runOnMainSync(() -> {
+            InterTrackDelaySettingsController settings = new InterTrackDelaySettingsController(host);
+            settings.openDialog();
+            android.widget.SeekBar slider = findGapSlider(host.overlayHost);
+            assertNotNull(slider);
+            assertEquals(0, slider.getProgress());
+            assertEquals(300, slider.getMax());
+            Bundle arguments = new Bundle();
+            arguments.putFloat(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, 300);
+            assertTrue(slider.performAccessibilityAction(
+                    android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), arguments));
+            assertEquals(300, context.getSharedPreferences(InterTrackDelayPolicy.PREFS, 0)
+                    .getInt(InterTrackDelayPolicy.SECONDS, -1));
+            assertTrue(settings.label().endsWith("5:00"));
+        });
+    }
+
+    private android.widget.SeekBar findGapSlider(android.view.View view) {
+        if (view instanceof android.widget.SeekBar) return (android.widget.SeekBar) view;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int index = 0; index < group.getChildCount(); index++) {
+                android.widget.SeekBar result = findGapSlider(group.getChildAt(index));
+                if (result != null) return result;
+            }
+        }
+        return null;
+    }
+
+    @Test
+    public void automaticGapResumesWithScreenOffAndKeepsSessionActive() throws Exception {
+        beginGap(Arrays.asList(firstTrack, secondTrack), Player.REPEAT_MODE_OFF);
+        long gapStarted = SystemClock.elapsedRealtime();
+        assertTrue(new com.dumuzeyn.mp3player.data.playback.PlaybackStateManager(context).load().playing);
+        InstrumentedTestSupport.runShellCommand(instrumentation, "input keyevent 223");
+        SystemClock.sleep(1000);
+        assertFalse(controllerValue(controller::isPlaying));
+        assertEquals(0, (int) controllerValue(controller::getCurrentMediaItemIndex));
+        waitForPlayingUri("Screen-off gap did not advance", secondTrack.uri);
+        assertTrue("Gap was shorter than configured", SystemClock.elapsedRealtime() - gapStarted >= 2600);
+    }
+
+    @Test
+    public void userPauseDuringGapCancelsTheScheduledResume() {
+        beginGap(Arrays.asList(firstTrack, secondTrack), Player.REPEAT_MODE_OFF);
+        controllerAction(controller::pause);
+        SystemClock.sleep(3700);
+        assertFalse(controllerValue(controller::getPlayWhenReady));
+        assertEquals(0, (int) controllerValue(controller::getCurrentMediaItemIndex));
+    }
+
+    @Test
+    public void sleepTimerDuringGapCannotRestartPlaybackLater() {
+        beginGap(Arrays.asList(firstTrack, secondTrack), Player.REPEAT_MODE_OFF);
+        Bundle timer = new Bundle();
+        timer.putLong(Media3Commands.ARG_TIMER_MS, 1000L);
+        controllerAction(() -> controller.sendCustomCommand(Media3Commands.TIMER_START_COMMAND, timer));
+        SystemClock.sleep(3700);
+        assertFalse(controllerValue(controller::getPlayWhenReady));
+        assertEquals(Player.STATE_IDLE, (int) controllerValue(controller::getPlaybackState));
+    }
+
+    @Test
+    public void repeatOneObservesGapAndRestartsTheSameSong() {
+        beginGap(Collections.singletonList(firstTrack), Player.REPEAT_MODE_ONE);
+        InstrumentedTestSupport.waitFor("Repeat-one gap did not resume", 8000L, () ->
+                controllerValue(() -> controller.isPlaying() && controller.getCurrentPosition() < 2000));
+        assertEquals(0, (int) controllerValue(controller::getCurrentMediaItemIndex));
+    }
+
+    @Test
+    public void manualNextDuringGapOverridesTheWait() {
+        beginGap(Arrays.asList(firstTrack, secondTrack), Player.REPEAT_MODE_OFF);
+        controllerAction(() -> { controller.seekToNextMediaItem(); controller.play(); });
+        waitForPlayingUri("Manual next remained delayed", secondTrack.uri);
+        controllerAction(controller::pause);
+        SystemClock.sleep(3500);
+        assertFalse(controllerValue(controller::isPlaying));
+        assertEquals(1, (int) controllerValue(controller::getCurrentMediaItemIndex));
+    }
+
+    private void beginGap(List<Track> tracks, int repeatMode) {
+        activity = launchMainActivity();
+        context.getSharedPreferences(InterTrackDelayPolicy.PREFS, 0).edit()
+                .putInt(InterTrackDelayPolicy.SECONDS, 3).commit();
+        startQueue(tracks, repeatMode);
+        waitForPlayingUri("Gap setup did not start", firstTrack.uri);
+        controllerAction(() -> controller.seekTo(5100));
+        InstrumentedTestSupport.waitFor("Automatic boundary did not pause for the gap", 10000L, () ->
+                controllerValue(() -> !controller.getPlayWhenReady() && controller.getCurrentMediaItemIndex() == 0
+                        && controller.getPlaybackState() == Player.STATE_READY));
     }
 
     private static void setUiSnapshot(MainActivityCore host, int trackIndex, boolean playing) {

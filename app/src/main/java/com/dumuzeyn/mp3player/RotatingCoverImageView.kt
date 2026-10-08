@@ -185,10 +185,15 @@ internal class RotatingCoverImageView(host: MainActivityCore) : ShapedCoverImage
 
     fun refreshCoverTransform() = setArtworkRotation(rotation)
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        refreshCoverTransform()
+    }
+
     private fun setArtworkRotation(degrees: Float) {
         rotation = degrees
         val fit = if (host.appearanceState.rotateCovers) {
-            CoverShapeGeometry.rotationFitScale(host.appearanceState.coverShape, degrees)
+            CoverShapeGeometry.rotationFitScale(host.appearanceState.coverShape, width.toFloat(), height.toFloat())
         } else 1f
         scaleX = fit
         scaleY = fit

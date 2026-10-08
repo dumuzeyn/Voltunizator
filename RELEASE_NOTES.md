@@ -1,3 +1,17 @@
+# Voltunizator 4.3.4
+
+- Тематические альбомы меньше дробятся на одиночные песни: допуск сходства стал мягче, а одиночные треки повторно сопоставляются с ближайшими группами. Явно непохожие песни сохраняются отдельно; группы обновляются по сохранённым аудиопрофилям.
+- Пересоздание очереди меняет подбор или порядок, когда есть альтернативы. Режимы по истории используют случайный подбор с приоритетом недавно прослушанных либо давно не включавшихся песен.
+- В настройках добавлена задержка между песнями от 0 секунд до 5 минут; по умолчанию — 0. Задержка работает при выключенном экране и отменяется ручным управлением, таймером сна или входом в редактор.
+- Обложки всех форм вращаются с постоянным масштабом и помещаются в своих границах при любом угле.
+
+## English
+
+- Thematic albums use a more tolerant bounded diameter and a nearest-neighbor pass for singleton groups, while unrelated outliers stay separate. Groups update from saved audio profiles.
+- Regenerated queues vary selection or order whenever alternatives exist. History modes use weighted random sampling favoring recent or long-unplayed songs.
+- Added a 0–5 minute inter-track delay, disabled by default. Automatic gaps work with the screen off and are canceled by manual controls, sleep timers or editor preview.
+- Every cover shape rotates at a constant scale with a rotation-safe fit.
+
 # Voltunizator 4.3.2
 
 - На главном экране осталась одна кнопка создания очереди. Удержание открывает четыре режима: «Случайная очередь», «Похожая очередь», «Недавно слушали», «Давно не слушали». Выбранный режим запоминается; счётчик количества песен сохранён.

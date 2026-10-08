@@ -60,7 +60,7 @@ public class SoundClusterEngineTest {
         for (SoundGroup group : new SoundClusterEngine().cluster(profiles)) {
             for (String first : group.trackIds) for (String second : group.trackIds) {
                 assertTrue("A similarity chain merged distant tracks", SoundFeatureNormalizer.distance(
-                        vectors.get(first), vectors.get(second)) <= 0.35000001);
+                        vectors.get(first), vectors.get(second)) <= 0.63000001);
             }
         }
     }
@@ -182,6 +182,15 @@ public class SoundClusterEngineTest {
             assertFalse(groups.isEmpty());
             assertTrue("size=" + size + " elapsedMs=" + elapsedMs, elapsedMs < 5000L);
         }
+    }
+
+    @Test
+    public void noisyCohortsDoNotDegenerateIntoMostlySingleSongAlbums() {
+        ArrayList<TrackAudioProfile> profiles = fourFamilies(30);
+        ArrayList<SoundGroup> groups = new SoundClusterEngine().cluster(profiles);
+        long singles = groups.stream().filter(group -> group.trackIds.size() == 1).count();
+        assertTrue("singletons=" + singles + " groups=" + groups.size(), singles <= profiles.size() / 8);
+        assertTrue(largest(groups) < profiles.size() * 0.55);
     }
 
     private static ArrayList<TrackAudioProfile> fourFamilies(int each) {

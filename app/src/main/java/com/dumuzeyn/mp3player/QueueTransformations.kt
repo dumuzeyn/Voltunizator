@@ -2,8 +2,37 @@ package com.dumuzeyn.mp3player
 
 import java.util.Collections
 import java.util.Random
+import kotlin.math.ln
 
 object QueueTransformations {
+    @JvmStatic
+    @JvmOverloads
+    fun historySample(source: List<Track>, count: Int, recentFirst: Boolean, random: Random = Random()): ArrayList<Track> {
+        val candidates = historySubset(source, source.size, recentFirst)
+        if (candidates.isEmpty()) return ArrayList()
+        val timestamps = candidates.map { it.lastPlayedAt }.distinct()
+        val ranks = timestamps.withIndex().associate { it.value to it.index }
+        val scores = candidates.map { track ->
+            val rank = ranks.getValue(track.lastPlayedAt).toDouble() / maxOf(1, timestamps.size - 1)
+            val weight = 1.0 / (1.0 + 3.0 * rank).let { it * it }
+            track to -ln(1.0 - random.nextDouble()) / weight
+        }
+        return scores.sortedBy { it.second }.take(count.coerceIn(1, candidates.size))
+            .mapTo(ArrayList()) { it.first }
+    }
+
+    @JvmStatic
+    fun <T> freshQueue(queue: List<T>, previous: List<T>, candidates: List<T>, keepFirst: Boolean): ArrayList<T> {
+        val result = ArrayList(queue)
+        if (result != previous || result.isEmpty()) return result
+        val firstMutable = if (keepFirst) 1 else 0
+        if (firstMutable >= result.size) return result
+        val unused = candidates.firstOrNull { it !in result }
+        if (unused != null) result[result.lastIndex] = unused
+        else if (result.size - firstMutable > 1) Collections.swap(result, firstMutable, result.lastIndex)
+        return result
+    }
+
     @JvmStatic
     fun historySubset(source: List<Track>, requestedCount: Int, recentFirst: Boolean): ArrayList<Track> {
         val candidates = source.distinctBy { it.trackId }
