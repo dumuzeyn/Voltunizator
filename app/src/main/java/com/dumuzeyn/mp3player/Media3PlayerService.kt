@@ -51,6 +51,7 @@ class Media3PlayerService : MediaLibraryService() {
     private lateinit var audioEffects: AudioEffectsManager
     private lateinit var loudnessNormalizer: TrackLoudnessNormalizer
     private lateinit var fadeController: PlaybackFadeController
+    private lateinit var gapController: PlaybackGapController
     private lateinit var commandHandler: Media3SessionCommandHandler
     private lateinit var eventLogger: PlaybackEventLogger
     private lateinit var historyRecorder: PlaybackHistoryRecorder
@@ -100,11 +101,17 @@ class Media3PlayerService : MediaLibraryService() {
             .build()
         playbackState = PlaybackServiceState(player, mapper, stateManager)
         fadeController = PlaybackFadeController(this, player)
+        gapController = PlaybackGapController(this, player) { waiting ->
+            playbackState.pauseReason = if (waiting) PauseReason.TRACK_GAP else PauseReason.USER
+            playbackState.persist(true)
+            if (waiting && ::mediaSession.isInitialized) onUpdateNotification(mediaSession, true)
+        }
         editorPreview = EditorPreviewSession(this, player, controllerAccess) { active ->
             playbackState.persistenceSuspended = active
             stopPositionSaver()
             historyRecorder.playing(false)
             fadeController.setPreviewMode(active)
+            gapController.setPreviewMode(active)
             if (active) audioEffects.release() else {
                 applyAudioEffects()
                 playbackState.persist(true)
@@ -132,14 +139,20 @@ class Media3PlayerService : MediaLibraryService() {
                     command: SessionCommand,
                     args: Bundle,
                 ): ListenableFuture<SessionResult> {
-                    if (command.customAction == Media3Commands.CLEAR_QUEUE) editorPreview.stop(false)
+                    if (command.customAction == Media3Commands.CLEAR_QUEUE) {
+                        gapController.cancel()
+                        editorPreview.stop(false)
+                    }
                     return commandHandler.handle(controller, command, args)
                 }
 
                 override fun preview(controller: MediaSession.ControllerInfo, args: Bundle) =
                     editorPreview.command(controller, args)
 
-                override fun beforePlayerCommand() = editorPreview.stop()
+                override fun beforePlayerCommand(command: Int) {
+                    gapController.beforeCommand(command)
+                    editorPreview.stop()
+                }
                 override fun disconnected(controller: MediaSession.ControllerInfo) = editorPreview.disconnected(controller)
 
                 override fun onCommand(action: String) {
@@ -186,14 +199,20 @@ class Media3PlayerService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession =
         mediaSession
 
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        super.onUpdateNotification(session, startInForegroundRequired ||
+            (::gapController.isInitialized && gapController.waiting))
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         editorPreview.stop(false)
         logEvent("task_removed", "none")
-        if (!player.isPlaying && player.playbackState != Player.STATE_BUFFERING) stopSelf()
+        if (!player.isPlaying && !gapController.waiting && player.playbackState != Player.STATE_BUFFERING) stopSelf()
     }
 
     override fun onDestroy() {
         editorPreview.close()
+        gapController.close()
         stopPositionSaver()
         sleepTimer.close()
         if (playbackState.stopReason == StopReason.NONE) {
@@ -215,6 +234,7 @@ class Media3PlayerService : MediaLibraryService() {
     }
 
     private fun onSleepTimerExpired() {
+        gapController.cancel()
         editorPreview.stop(false)
         playbackState.pauseReason = PauseReason.SLEEP_TIMER
         playbackState.stopReason = StopReason.SLEEP_TIMER
@@ -379,6 +399,7 @@ class Media3PlayerService : MediaLibraryService() {
             if (editorPreview.active) return
             if (!playWhenReady) {
                 when {
+                    gapController.waiting -> playbackState.pauseReason = PauseReason.TRACK_GAP
                     reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS -> {
                         playbackState.pauseReason = transitionPolicy.onTemporaryAudioFocusLoss(true)
                         audioFocusState = "lost"

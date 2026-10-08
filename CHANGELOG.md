@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.3.4
+
+- Relaxed bounded cluster cohesion and added a nearest-neighbor pass for singleton groups while retaining outlier isolation. Saved profiles migrate to clustering version 5 without reanalyzing audio.
+- Generated history queues now use rank-weighted sampling; repeated generation changes selection or order when alternatives exist. Recent mode excludes unplayed songs, while long-unplayed mode favors them.
+- Added a 0–300 second delay between automatic song transitions, disabled by default. The service holds a bounded wake lock during gaps; manual controls, sleep timers and editor preview cancel waiting.
+- Replaced angle-dependent cover scaling with a fixed rotation-safe fit for every shape and added geometry and rendered-pixel regression checks.
+
 ## 4.3.2
 
 - Replaced separate random/similar Home buttons with one persistent four-mode queue action and a long-press picker, preserving the count wheel.

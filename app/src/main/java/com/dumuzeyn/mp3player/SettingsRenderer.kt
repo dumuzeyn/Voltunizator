@@ -14,6 +14,8 @@ internal class SettingsRenderer(private val host: MainActivityCore) {
     private var artistButton: Button? = null
     private var uninterruptedButton: Button? = null
     private var backgroundPlaybackButton: Button? = null
+    private val interTrackDelay = InterTrackDelaySettingsController(host)
+    private var interTrackDelayButton: Button? = null
     private var volumeButton: Button? = null
     private var equalizerButton: Button? = null
     private var stableVolumeButton: Button? = null
@@ -47,6 +49,7 @@ internal class SettingsRenderer(private val host: MainActivityCore) {
             host.settingsController.resumeWindowText()
         uninterruptedButton?.text = host.uninterruptedPlaybackController.settingLabel()
         backgroundPlaybackButton?.text = host.backgroundPlaybackSettingsController.settingLabel()
+        interTrackDelayButton?.text = interTrackDelay.label()
         volumeButton?.text = host.volumeLevelingController.settingLabel()
         equalizerButton?.text = host.equalizerController.settingLabel()
         stableVolumeButton?.text = host.stableVolumeController.settingLabel()
@@ -106,6 +109,7 @@ internal class SettingsRenderer(private val host: MainActivityCore) {
         backgroundPlaybackButton = addButton(
             host.backgroundPlaybackSettingsController.settingLabel(),
         ) { host.backgroundPlaybackSettingsController.openDialog() }
+        interTrackDelayButton = addButton(interTrackDelay.label()) { interTrackDelay.openDialog() }
 
         section(host.tr("Sound", "Звук"))
         fadeButton = addButton(fadeSettings.label()) { fadeSettings.toggle() }.apply {

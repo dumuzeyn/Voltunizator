@@ -41,6 +41,38 @@ public class QueueTransformationsTest {
     }
 
     @Test
+    public void historySamplingVariesAndStillFavorsTheChosenDirection() {
+        List<Track> source = Arrays.asList(history("never", 0), history("old", 100),
+                history("middle", 200), history("new", 300));
+        Random recentRandom = new Random(42);
+        Random oldRandom = new Random(42);
+        int newest = 0, oldest = 0;
+        HashSet<String> recentSets = new HashSet<>();
+        for (int attempt = 0; attempt < 1000; attempt++) {
+            List<Track> recent = QueueTransformations.historySample(source, 2, true, recentRandom);
+            assertEquals(2, new HashSet<>(recent).size());
+            assertFalse(recent.contains(source.get(0)));
+            recentSets.add(recent.toString());
+            if (QueueTransformations.historySample(source, 1, true, recentRandom).get(0) == source.get(3)) newest++;
+            if (QueueTransformations.historySample(source, 1, false, oldRandom).get(0) == source.get(0)) oldest++;
+        }
+        assertTrue(recentSets.size() > 2);
+        assertTrue("newest=" + newest, newest > 600);
+        assertTrue("unplayed=" + oldest, oldest > 500);
+    }
+
+    @Test
+    public void identicalRegenerationChangesSelectionOrOrderWheneverPossible() {
+        List<String> previous = Arrays.asList("a", "b");
+        assertEquals(Arrays.asList("a", "c"), QueueTransformations.freshQueue(previous, previous,
+                Arrays.asList("a", "b", "c"), true));
+        assertEquals(Arrays.asList("b", "a"), QueueTransformations.freshQueue(previous, previous, previous, false));
+        assertEquals(Arrays.asList("b"), QueueTransformations.freshQueue(Arrays.asList("a"), Arrays.asList("a"), previous, false));
+        assertEquals(Arrays.asList("a"), QueueTransformations.freshQueue(Arrays.asList("a"), Arrays.asList("a"), previous, true));
+        assertEquals(Arrays.asList("a"), QueueTransformations.freshQueue(Arrays.asList("a"), Arrays.asList("a"), Arrays.asList("a"), false));
+    }
+
+    @Test
     public void moveKeepsEveryElement() {
         assertEquals(Arrays.asList("b", "c", "a"),
                 QueueTransformations.move(Arrays.asList("a", "b", "c"), 0, 2));

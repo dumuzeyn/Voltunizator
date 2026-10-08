@@ -13,6 +13,7 @@ internal class SoundClusterEngine {
         if (profiles.size < MIN_LIBRARY_SIZE) return ArrayList()
         val normalized = SoundFeatureNormalizer.normalize(profiles)
         val threshold = adaptiveThreshold(normalized.vectors)
+        val diameter = cohesionDiameter(threshold)
         val clusters = ArrayList<MutableCluster>()
         for (index in profiles.indices) {
             addToNearest(
@@ -20,8 +21,10 @@ internal class SoundClusterEngine {
                 profiles[index].trackId,
                 normalized.vectors[index],
                 threshold,
+                diameter,
             )
         }
+        joinSingletons(clusters, threshold, diameter)
         val groups = ArrayList<SoundGroup>()
         for (cluster in clusters) {
             cluster.trackIds.sort()
@@ -54,13 +57,14 @@ internal class SoundClusterEngine {
         val normalization = SoundFeatureNormalizer.normalize(usable)
         val vector = normalization.vector(rawFeatures)
         val threshold = adaptiveThreshold(normalization.vectors)
+        val diameter = cohesionDiameter(threshold)
         val byId = usable.indices.associate { usable[it].trackId to normalization.vectors[it] }
         var nearest: SoundGroup? = null
         var distance = Double.POSITIVE_INFINITY
         for (group in groups) {
             val members = group.trackIds.mapNotNull(byId::get)
             if (members.isEmpty() || members.any {
-                    SoundFeatureNormalizer.distance(vector, it) > threshold
+                    SoundFeatureNormalizer.distance(vector, it) > diameter
                 }) continue
             // Stored centroids use the previous library's scaling; recompute in the current space.
             val centroid = DoubleArray(TrackAudioProfile.FEATURE_COUNT)
@@ -68,7 +72,7 @@ internal class SoundClusterEngine {
                 centroid.indices.forEach { centroid[it] += member[it] / members.size }
             }
             val current = SoundFeatureNormalizer.distance(vector, centroid)
-            if (current < distance) {
+            if (current < distance && current <= threshold * 1.25) {
                 distance = current
                 nearest = group
             }
@@ -95,7 +99,7 @@ internal class SoundClusterEngine {
     }
 
     companion object {
-        const val CLUSTERING_VERSION = 4
+        const val CLUSTERING_VERSION = 5
         private const val MIN_LIBRARY_SIZE = 4
         private const val DISTANCE_SAMPLE_LIMIT = 256
 
@@ -139,12 +143,13 @@ internal class SoundClusterEngine {
             trackId: String,
             vector: DoubleArray,
             threshold: Double,
+            diameter: Double,
         ) {
             var nearest: MutableCluster? = null
             var distance = Double.POSITIVE_INFINITY
             for (cluster in clusters) {
                 val current = SoundFeatureNormalizer.distance(vector, cluster.centroid)
-                if (current < distance && current <= threshold && cluster.accepts(vector, threshold)) {
+                if (current < distance && current <= threshold && cluster.accepts(vector, diameter)) {
                     distance = current
                     nearest = cluster
                 }
@@ -153,6 +158,21 @@ internal class SoundClusterEngine {
                 clusters.add(MutableCluster(trackId, vector))
             } else {
                 nearest.add(trackId, vector)
+            }
+        }
+
+        private fun cohesionDiameter(threshold: Double): Double = min(1.75, threshold * 1.8)
+
+        private fun joinSingletons(clusters: ArrayList<MutableCluster>, threshold: Double, diameter: Double) {
+            for (single in clusters.toList()) {
+                if (single.trackIds.size != 1 || single !in clusters) continue
+                val target = clusters.asSequence().filter { it !== single }
+                    .filter { it.accepts(single.centroid, diameter) }
+                    .map { it to SoundFeatureNormalizer.distance(single.centroid, it.centroid) }
+                    .filter { it.second <= threshold * 1.25 }
+                    .minByOrNull { it.second }?.first ?: continue
+                target.add(single.trackIds.first(), single.members.first())
+                clusters.remove(single)
             }
         }
 

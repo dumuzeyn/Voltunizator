@@ -7,4 +7,5 @@ enum class PauseReason {
     AUDIO_BECOMING_NOISY,
     SYSTEM_INTERRUPTION,
     SLEEP_TIMER,
+    TRACK_GAP,
 }

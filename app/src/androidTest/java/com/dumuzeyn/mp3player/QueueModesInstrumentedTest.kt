@@ -60,16 +60,25 @@ class QueueModesInstrumentedTest {
         }
     }
 
-    @Test fun historyQueuesUseListeningOrderAndEmptyHistoryDoesNotReplaceExistingQueue() {
+    @Test fun historyQueuesRegenerateAndEmptyHistoryDoesNotReplaceExistingQueue() {
         val tracks = prepareTracks(true)
         val host = launch(tracks)
         for (mode in listOf(QueueCreationMode.RECENT, QueueCreationMode.OLDEST)) {
+            instrumentation.runOnMainSync { host.playbackController.clearQueue() }
+            await("Previous queue did not clear") { host.playbackUiState.queue.isEmpty() }
             instrumentation.runOnMainSync { host.playbackQueueController.playGenerated(mode, 3) }
-            val expected = QueueTransformations.historySubset(tracks, 3, mode == QueueCreationMode.RECENT)
-                .map { it.trackId }
-            await("History queue has the wrong order: $mode") {
-                host.playbackUiState.queue.map { it.trackId } == expected &&
+            await("History queue did not start: $mode") {
+                host.playbackUiState.queue.size == 3 &&
                     host.playbackSnapshot().phase == PlaybackPhase.READY
+            }
+            var before = emptyList<String>()
+            instrumentation.runOnMainSync {
+                before = host.playbackUiState.queue.map { it.trackId }
+                if (mode == QueueCreationMode.RECENT) assertTrue(host.playbackUiState.queue.all { it.lastPlayedAt > 0L })
+                host.playbackQueueController.playGenerated(mode, 3)
+            }
+            await("Regenerated queue stayed identical: $mode") {
+                host.playbackUiState.queue.size == 3 && host.playbackUiState.queue.map { it.trackId } != before
             }
         }
         instrumentation.runOnMainSync {

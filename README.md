@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.3.2-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
+    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.3.4-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="Open English version">
@@ -31,7 +31,7 @@
 
 Voltunizator превращает музыку на телефоне в личную медиатеку. Приложение находит треки, продолжает играть в фоне, помнит очередь и позицию, а внешний вид можно настроить под себя. Для прослушивания не нужны интернет, регистрация или облачный сервис.
 
-**Версия 4.3.2.** Одна кнопка очереди с выбором четырёх режимов по удержанию: случайная, похожая, недавно прослушанные и давно не включавшиеся песни. Улучшена однородность тематических альбомов; сохранённые группы пересобираются без повторного анализа аудио.
+**Версия 4.3.4.** Разнообразные пересоздаваемые очереди, меньше одиночных тематических альбомов, задержка между песнями до пяти минут и вращение обложек без изменения масштаба и обрезания.
 
 <a id="screenshots"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Главная: продолжить прослушивание и быстрые очереди"><br><em>Главная и быстрые очереди</em></p>
@@ -72,7 +72,7 @@ flowchart LR
 
 Песни, избранное, плейлисты, тематические альбомы, жанры, исполнители и альбомы собраны в понятные разделы. Доступны поиск, сортировка, случайное и последовательное воспроизведение, ручная очередь и добавление треков в коллекции. Даже большая медиатека открывается без создания тысяч невидимых карточек.
 
-На главном экране удержание кнопки очереди открывает выбор режима: случайные или похожие песни, недавно прослушанные либо давно не включавшиеся. Короткое нажатие создаёт очередь в выбранном режиме, а счётчик рядом задаёт количество песен. Выбор режима сохраняется.
+На главном экране удержание кнопки очереди открывает выбор режима: случайные или похожие песни, недавно прослушанные либо давно не включавшиеся. Короткое нажатие создаёт новую очередь, а счётчик рядом задаёт количество песен. Выбор режима сохраняется; очереди по истории разнообразны и учитывают давность прослушивания. В настройках можно задать задержку между песнями от 0 секунд до 5 минут.
 
 <p align="center"><img src="docs/screenshots/collection-4.2.0/02-songs.png" width="260" alt="Список песен с обложками"><br><em>Песни и медиатека</em></p>
 
@@ -274,7 +274,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Version_4.3.2-9b4dff?style=for-the-badge" alt="Download Voltunizator">
+    <img src="https://img.shields.io/badge/Download_APK-Version_4.3.4-9b4dff?style=for-the-badge" alt="Download Voltunizator">
   </a>
   <a href="#russian">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Открыть русскую версию">
@@ -289,7 +289,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 Voltunizator turns locally stored music into a personal library. It finds tracks quickly, keeps playing in the background, remembers the queue and position, and offers visual customization. Playback requires no internet connection, account, or cloud service. Screenshots appear beside the features they show.
 
-**Version 4.3.2.** One Home queue button offers four remembered modes via long-press: random, similar, recently listened and long-unplayed songs. Thematic albums use stricter group cohesion and rebuild from saved profiles without reanalyzing audio.
+**Version 4.3.4.** More varied regenerated queues, fewer single-song thematic albums, an inter-track delay up to five minutes and constant-scale cover rotation without clipping.
 
 <a id="screenshots-en"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Home screen with listening continuity and quick queues"><br><em>Home and quick queues</em></p>
@@ -330,7 +330,7 @@ The library is the shared foundation for playback, search, thematic albums, play
 
 Songs, Favorites, Playlists, Thematic albums, Genres, Artists, and Albums are organized into focused sections. Search, sorting, shuffle, sequential playback, a manual queue, and collection actions remain close at hand. Large libraries stay responsive because Voltunizator creates only the rows that are actually visible.
 
-Long-press the Home queue button to select random, similar, recent-listening or long-unplayed songs. Tap it to create the queue using the adjacent count wheel. The selected mode is remembered.
+Long-press the Home queue button to select random, similar, recent-listening or long-unplayed songs. Tap it to generate a new queue using the adjacent count wheel. The selected mode is remembered; history queues vary while favoring the selected listening recency. Settings include a 0–5 minute delay between songs.
 
 <p align="center"><img src="docs/screenshots/collection-4.2.0/02-songs.png" width="260" alt="Song list with artwork"><br><em>Songs and library</em></p>
 

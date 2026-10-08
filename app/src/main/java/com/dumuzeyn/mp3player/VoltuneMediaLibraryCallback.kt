@@ -41,7 +41,7 @@ internal class VoltuneMediaLibraryCallback(
         fun onCommand(action: String)
         fun preview(controller: MediaSession.ControllerInfo, args: Bundle): SessionResult =
             SessionResult(SessionError.ERROR_NOT_SUPPORTED)
-        fun beforePlayerCommand() = Unit
+        fun beforePlayerCommand(command: Int) = Unit
         fun disconnected(controller: MediaSession.ControllerInfo) = Unit
     }
 
@@ -116,7 +116,7 @@ internal class VoltuneMediaLibraryCallback(
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onPlayerCommandRequest(session: MediaSession, controller: MediaSession.ControllerInfo,
         playerCommand: Int): Int {
-        commands.beforePlayerCommand()
+        commands.beforePlayerCommand(playerCommand)
         return SessionResult.RESULT_SUCCESS
     }
 

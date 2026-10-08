@@ -1,6 +1,7 @@
 package com.dumuzeyn.mp3player;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import android.app.Instrumentation;
 import android.content.Context;
@@ -73,6 +74,46 @@ public class CoverAppearanceInstrumentedTest {
             cover.beginSeekSpin(0);
             cover.updateSeekSpin(9000);
             assertEquals(90f, cover.getRotation(), 0.01f);
+        });
+    }
+
+    @Test
+    public void rotatingShapesKeepTheirScaleAndNeverDrawOutsideTheCoverSlot() {
+        instrumentation.runOnMainSync(() -> {
+            host.appearanceState.rotateCovers = true;
+            host.appearanceState.fullPlayerRotationSpeed = 100;
+            for (String shape : new String[]{"circle", "triangle", "hexagon", "star", "diamond", "rounded"}) {
+                host.appearanceState.coverShape = shape;
+                RotatingCoverImageView cover = new RotatingCoverImageView(host);
+                cover.setBackgroundColor(Color.RED);
+                int spec = View.MeasureSpec.makeMeasureSpec(128, View.MeasureSpec.EXACTLY);
+                cover.measure(spec, spec);
+                cover.layout(0, 0, 128, 128);
+                cover.beginSeekSpin(0);
+                float scale = cover.getScaleX();
+                int initialArea = 0;
+                for (int degree = 0; degree < 360; degree += 15) {
+                    cover.updateSeekSpin(degree * 50);
+                    assertEquals(shape + " changed size", scale, cover.getScaleX(), 0.0001f);
+                    Bitmap bitmap = Bitmap.createBitmap(160, 160, Bitmap.Config.ARGB_8888);
+                    Canvas canvas = new Canvas(bitmap);
+                    canvas.translate(80, 80);
+                    canvas.rotate(cover.getRotation());
+                    canvas.scale(cover.getScaleX(), cover.getScaleY());
+                    canvas.translate(-64, -64);
+                    cover.draw(canvas);
+                    int area = 0;
+                    for (int y = 0; y < 160; y++) for (int x = 0; x < 160; x++) {
+                        if (Color.alpha(bitmap.getPixel(x, y)) == 0) continue;
+                        area++;
+                        assertTrue(shape + " escaped its slot", x >= 15 && x <= 144 && y >= 15 && y <= 144);
+                    }
+                    if (degree == 0) initialArea = area;
+                    assertTrue(shape + " changed visible area", Math.abs(area - initialArea) < initialArea * 0.05);
+                    bitmap.recycle();
+                }
+                cover.endSeekSpin(0, false);
+            }
         });
     }
 }

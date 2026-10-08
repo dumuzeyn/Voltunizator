@@ -50,11 +50,35 @@ class CoverShapeGeometryTest {
 
     @Test fun rotatedSquareAlwaysFitsItsOriginalBounds() {
         for (degree in 0..90) {
-            val scale = CoverShapeGeometry.rotationFitScale("rounded", degree.toFloat())
+            val scale = CoverShapeGeometry.rotationFitScale("rounded", 100f, 100f)
             val radians = degree * PI / 180.0
             val transformedExtent = scale * (abs(cos(radians)) + abs(sin(radians)))
             assertTrue(transformedExtent <= 1.0001)
         }
-        assertEquals(1f, CoverShapeGeometry.rotationFitScale("circle", 45f), 0f)
+        assertEquals(1f, CoverShapeGeometry.rotationFitScale("circle", 100f, 100f), 0f)
+    }
+
+    @Test fun everyPolygonFitsAtEveryAngleUsingOneFixedScale() {
+        for (shape in listOf("triangle", "hexagon", "star", "diamond", "rounded")) {
+            for ((width, height) in listOf(100f to 100f, 140f to 100f, 100f to 140f)) {
+                val scale = CoverShapeGeometry.rotationFitScale(shape, width, height)
+                val vertices = when (shape) {
+                    "rounded" -> listOf(0f to 0f, width to 0f, width to height, 0f to height)
+                    "diamond" -> listOf(width / 2f to 0f, width to height / 2f, width / 2f to height, 0f to height / 2f)
+                    else -> CoverShapeGeometry.vertices(shape, width, height)
+                }
+                for (degree in 0..359) {
+                    val angle = degree * PI / 180.0
+                    for ((x, y) in vertices) {
+                        val dx = (x - width / 2f) * scale
+                        val dy = (y - height / 2f) * scale
+                        val rotatedX = dx * cos(angle) - dy * sin(angle)
+                        val rotatedY = dx * sin(angle) + dy * cos(angle)
+                        assertTrue("$shape clipped at $degree", abs(rotatedX) <= width / 2f + 0.001f &&
+                            abs(rotatedY) <= height / 2f + 0.001f)
+                    }
+                }
+            }
+        }
     }
 }
