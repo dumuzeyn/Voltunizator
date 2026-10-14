@@ -159,6 +159,8 @@ class QueueModesInstrumentedTest {
         await("Cached groups were not loaded") {
             host.soundAnalysisController.groups().sumOf { it.trackIds.size } == tracks.size
         }
+        instrumentation.runOnMainSync { host.playbackQueueController.playTrack(tracks.first()) }
+        await("Playback setup did not set play intent") { host.isPlaybackPlaying() }
         stopPlaybackForAnalysis(host)
         val pendingStore = SoundProfileStore(context)
         pendingStore.mark(tracks.last(), SoundAnalysisState.QUEUED, "")

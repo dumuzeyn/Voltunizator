@@ -47,8 +47,8 @@ class PlaybackUiState {
     fun isPlaying(): Boolean {
         val snapshot = mutableState.value
         return snapshot.playWhenReady &&
-            snapshot.phase != PlaybackPhase.ENDED &&
-            snapshot.phase != PlaybackPhase.ERROR
+            snapshot.queueMediaIds.isNotEmpty() &&
+            (snapshot.phase == PlaybackPhase.READY || snapshot.phase == PlaybackPhase.BUFFERING)
     }
 
     fun repeatMode(): Int = RepeatModeMapper.fromMedia3(mutableState.value.repeatMode)

@@ -48,6 +48,7 @@ internal class Media3SessionCommandHandler(
                 success()
             }
             Media3Commands.CLEAR_QUEUE -> {
+                player.pause()
                 player.stop()
                 player.clearMediaItems()
                 stateManager.clear()
