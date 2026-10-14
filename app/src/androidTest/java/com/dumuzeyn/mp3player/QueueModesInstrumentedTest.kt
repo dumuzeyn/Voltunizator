@@ -1,21 +1,29 @@
 package com.dumuzeyn.mp3player
 
 import android.content.Context
+import android.content.ComponentName
 import android.net.Uri
+import android.os.Bundle
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import androidx.media3.session.SessionResult
 import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager
 import java.io.File
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class QueueModesInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -151,6 +159,7 @@ class QueueModesInstrumentedTest {
         await("Cached groups were not loaded") {
             host.soundAnalysisController.groups().sumOf { it.trackIds.size } == tracks.size
         }
+        stopPlaybackForAnalysis(host)
         val pendingStore = SoundProfileStore(context)
         pendingStore.mark(tracks.last(), SoundAnalysisState.QUEUED, "")
         pendingStore.close()
@@ -160,13 +169,45 @@ class QueueModesInstrumentedTest {
             descendants(host.list).filterIsInstance<Button>()
                 .single { it.text.toString() == "Пересобрать группы" }.performClick()
         }
-        InstrumentedTestSupport.waitFor("Manual rebuild left pending analysis stopped", 30000) {
-            val profiles = SoundProfileStore(context)
-            try {
-                val updated = profiles.loadProfiles()[tracks.last().trackId]
-                updated?.usable() == true && updated.features.any { it != 0.0 }
-            } finally { profiles.close() }
+        try {
+            InstrumentedTestSupport.waitFor("Manual rebuild left pending analysis stopped", 30000) {
+                val profiles = SoundProfileStore(context)
+                try {
+                    val updated = profiles.loadProfiles()[tracks.last().trackId]
+                    updated?.usable() == true && updated.features.any { it != 0.0 }
+                } finally { profiles.close() }
+            }
+        } catch (error: AssertionError) {
+            var state = ""
+            instrumentation.runOnMainSync {
+                val analysis = host.soundAnalysisController
+                val variation = host.getSharedPreferences("mp3_player_ui", 0)
+                    .getLong(SoundAnalysisController.CLUSTERING_VARIATION, 0)
+                state = "enabled=${analysis.enabled()} tracks=${host.libraryState.tracks.size} " +
+                    "blocked=${analysis.blockReason()} playing=${host.isPlaybackPlaying()} " +
+                    "queued=${analysis.queued()} analyzed=${analysis.analyzed()} failed=${analysis.failed()} " +
+                    "rebuilding=${analysis.rebuildingGroups()} active=${analysis.activeTitle()} " +
+                    "variation=$variation"
+            }
+            throw AssertionError(state, error)
         }
+    }
+
+    private fun stopPlaybackForAnalysis(host: MainActivityCore) {
+        val controller = MediaController.Builder(context, SessionToken(context,
+            ComponentName(context, Media3PlayerService::class.java)))
+            .setApplicationLooper(Looper.getMainLooper()).buildAsync().get(15, TimeUnit.SECONDS)
+        try {
+            lateinit var cleared: com.google.common.util.concurrent.ListenableFuture<SessionResult>
+            instrumentation.runOnMainSync {
+                controller.stop()
+                cleared = controller.sendCustomCommand(Media3Commands.CLEAR_QUEUE_COMMAND, Bundle.EMPTY)
+            }
+            assertEquals(SessionResult.RESULT_SUCCESS, cleared.get(15, TimeUnit.SECONDS).resultCode)
+            await("Background playback did not stop before analysis") {
+                !host.isPlaybackPlaying() && host.playbackUiState.queue.isEmpty()
+            }
+        } finally { instrumentation.runOnMainSync { controller.release() } }
     }
 
     private fun prepareTracks(history: Boolean): List<Track> {
