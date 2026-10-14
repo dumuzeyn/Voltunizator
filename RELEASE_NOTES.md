@@ -1,3 +1,17 @@
+# Voltunizator 4.4.0
+
+- Тематические альбомы переведены на K-means++ с итеративным уточнением центров, разделением неоднородных групп и объединением близких мелких групп. Это уменьшает дробление на одиночные панели; явно непохожие песни по-прежнему могут остаться отдельно.
+- Каждое нажатие «Пересобрать группы» использует новую небольшую вариацию временных нормализованных точек. Сохранённые аудиопрофили не изменяются, повторное декодирование песен для пересборки не требуется. Хорошо отделённые группы могут остаться прежними.
+- Существующие группы обновляются из сохранённых профилей. Ручная пересборка больше не останавливает оставшуюся очередь анализа.
+- Исправлено ложное состояние воспроизведения после остановки или очистки очереди, которое могло мешать анализу песен.
+
+## English
+
+- Thematic albums now use K-means++ with iterative center refinement, cohesion-based splitting and nearby small-group merging. This reduces singleton fragmentation while preserving isolated outliers.
+- Each manual rebuild uses a new small variation of temporary normalized points. Saved audio measurements remain unchanged, with no audio re-decoding required for rebuilding. Well-separated groups may remain identical.
+- Existing groups migrate from cached profiles, and manual rebuilds resume any pending analysis queue.
+- Fixed stale playback intent after stopping or clearing the queue, which could incorrectly keep audio analysis paused.
+
 # Voltunizator 4.3.4
 
 - Тематические альбомы меньше дробятся на одиночные песни: допуск сходства стал мягче, а одиночные треки повторно сопоставляются с ближайшими группами. Явно непохожие песни сохраняются отдельно; группы обновляются по сохранённым аудиопрофилям.

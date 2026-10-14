@@ -1,21 +1,29 @@
 package com.dumuzeyn.mp3player
 
 import android.content.Context
+import android.content.ComponentName
 import android.net.Uri
+import android.os.Bundle
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import androidx.media3.session.SessionResult
 import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager
 import java.io.File
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class QueueModesInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -29,7 +37,8 @@ class QueueModesInstrumentedTest {
         }
         PlaybackStateManager(context).clear()
         context.getSharedPreferences("mp3_player_ui", 0).edit()
-            .remove(QueueCreationMode.PREFERENCE).putBoolean("soundAnalysisEnabled", true).commit()
+            .remove(QueueCreationMode.PREFERENCE).remove(SoundAnalysisController.CLUSTERING_VARIATION)
+            .putBoolean("soundAnalysisEnabled", true).commit()
         files.forEach { it.delete() }
     }
 
@@ -104,11 +113,26 @@ class QueueModesInstrumentedTest {
         store.close()
         val preferences = context.getSharedPreferences("mp3_player_ui", 0)
         preferences.edit().putBoolean("soundAnalysisEnabled", true)
-            .putInt("similarClusteringVersion", 3).commit()
+            .putInt("similarClusteringVersion", 3).remove(SoundAnalysisController.CLUSTERING_VARIATION).commit()
         val host = launch(tracks, migration = true)
         await("Saved groups were not migrated") {
             preferences.getInt("similarClusteringVersion", 0) == SoundClusterEngine.CLUSTERING_VERSION &&
                 host.soundAnalysisController.groups().size == 2
+        }
+        instrumentation.runOnMainSync { host.navigationState.tabIndex = LibraryTabs.SOUND; host.render() }
+        for (variation in 1L..2L) {
+            instrumentation.runOnMainSync {
+                descendants(host.list).filterIsInstance<Button>()
+                    .single { it.text.toString() == "Пересобрать группы" }.performClick()
+            }
+            await("Rebuild did not persist a new start variation") {
+                preferences.getLong(SoundAnalysisController.CLUSTERING_VARIATION, 0L) == variation &&
+                    !host.soundAnalysisController.rebuildingGroups() &&
+                    descendants(host.list).filterIsInstance<Button>().any {
+                        it.text.toString() == "Пересобрать группы" && it.isEnabled
+                    }
+            }
+            assertEquals(8, host.soundAnalysisController.groups().sumOf { it.trackIds.size })
         }
         val updated = SoundProfileStore(context)
         try {
@@ -123,6 +147,69 @@ class QueueModesInstrumentedTest {
         } finally {
             updated.close()
         }
+    }
+
+    @Test fun manualRebuildResumesPendingAudioAnalysis() {
+        val tracks = prepareTracks(false)
+        val store = SoundProfileStore(context)
+        tracks.forEach { track -> store.saveProfile(TrackAudioProfile.analyzed(track,
+            DoubleArray(TrackAudioProfile.FEATURE_COUNT))) }
+        store.close()
+        val host = launch(tracks, migration = true)
+        await("Cached groups were not loaded") {
+            host.soundAnalysisController.groups().sumOf { it.trackIds.size } == tracks.size
+        }
+        instrumentation.runOnMainSync { host.playbackQueueController.playTrack(tracks.first()) }
+        await("Playback setup did not set play intent") { host.isPlaybackPlaying() }
+        stopPlaybackForAnalysis(host)
+        val pendingStore = SoundProfileStore(context)
+        pendingStore.mark(tracks.last(), SoundAnalysisState.QUEUED, "")
+        pendingStore.close()
+        instrumentation.runOnMainSync {
+            host.navigationState.tabIndex = LibraryTabs.SOUND
+            host.render()
+            descendants(host.list).filterIsInstance<Button>()
+                .single { it.text.toString() == "Пересобрать группы" }.performClick()
+        }
+        try {
+            InstrumentedTestSupport.waitFor("Manual rebuild left pending analysis stopped", 30000) {
+                val profiles = SoundProfileStore(context)
+                try {
+                    val updated = profiles.loadProfiles()[tracks.last().trackId]
+                    updated?.usable() == true && updated.features.any { it != 0.0 }
+                } finally { profiles.close() }
+            }
+        } catch (error: AssertionError) {
+            var state = ""
+            instrumentation.runOnMainSync {
+                val analysis = host.soundAnalysisController
+                val variation = host.getSharedPreferences("mp3_player_ui", 0)
+                    .getLong(SoundAnalysisController.CLUSTERING_VARIATION, 0)
+                state = "enabled=${analysis.enabled()} tracks=${host.libraryState.tracks.size} " +
+                    "blocked=${analysis.blockReason()} playing=${host.isPlaybackPlaying()} " +
+                    "queued=${analysis.queued()} analyzed=${analysis.analyzed()} failed=${analysis.failed()} " +
+                    "rebuilding=${analysis.rebuildingGroups()} active=${analysis.activeTitle()} " +
+                    "variation=$variation"
+            }
+            throw AssertionError(state, error)
+        }
+    }
+
+    private fun stopPlaybackForAnalysis(host: MainActivityCore) {
+        val controller = MediaController.Builder(context, SessionToken(context,
+            ComponentName(context, Media3PlayerService::class.java)))
+            .setApplicationLooper(Looper.getMainLooper()).buildAsync().get(15, TimeUnit.SECONDS)
+        try {
+            lateinit var cleared: com.google.common.util.concurrent.ListenableFuture<SessionResult>
+            instrumentation.runOnMainSync {
+                controller.stop()
+                cleared = controller.sendCustomCommand(Media3Commands.CLEAR_QUEUE_COMMAND, Bundle.EMPTY)
+            }
+            assertEquals(SessionResult.RESULT_SUCCESS, cleared.get(15, TimeUnit.SECONDS).resultCode)
+            await("Background playback did not stop before analysis") {
+                !host.isPlaybackPlaying() && host.playbackUiState.queue.isEmpty()
+            }
+        } finally { instrumentation.runOnMainSync { controller.release() } }
     }
 
     private fun prepareTracks(history: Boolean): List<Track> {

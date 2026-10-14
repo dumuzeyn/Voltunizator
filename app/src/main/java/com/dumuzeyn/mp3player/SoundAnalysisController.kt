@@ -95,12 +95,22 @@ internal class SoundAnalysisController(private val host: MainActivityCore) : Clo
             try {
                 ensureWorkerResources()
                 val profiles = requireNotNull(store).loadProfiles()
-                if (requestedGeneration == generation.get()) rebuildGroups(profiles)
+                if (requestedGeneration == generation.get()) {
+                    val variation = host.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .getLong(CLUSTERING_VARIATION, 0L) + 1L
+                    rebuildGroups(profiles, variation)
+                }
             } catch (error: RuntimeException) {
                 VoltuneLog.failure("sound_group_rebuild_failed", error)
             } finally {
                 rebuildingGroups = false
                 notifyUi()
+                host.uiHandler.post {
+                    if (!closed && enabled() && requestedGeneration == generation.get()) {
+                        lastLibrarySignature = Long.MIN_VALUE
+                        onLibraryReady(host.libraryState.tracks)
+                    }
+                }
             }
         }
         return true
@@ -314,13 +324,15 @@ internal class SoundAnalysisController(private val host: MainActivityCore) : Clo
         if (usableCount(profiles) <= 20) rebuildGroups(profiles)
     }
 
-    private fun rebuildGroups(profiles: Map<String, TrackAudioProfile>) {
+    private fun rebuildGroups(profiles: Map<String, TrackAudioProfile>, variation: Long =
+        host.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(CLUSTERING_VARIATION, 0L)) {
         val profileStore = requireNotNull(store)
-        val rebuilt = clusterEngine.cluster(ArrayList(profiles.values))
+        val rebuilt = clusterEngine.cluster(ArrayList(profiles.values), variation)
         profileStore.replaceGroups(rebuilt)
         groups = profileStore.loadGroups()
         host.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(CLUSTERING_VERSION, SoundClusterEngine.CLUSTERING_VERSION)
+            .putLong(CLUSTERING_VARIATION, variation)
             .apply()
     }
 
@@ -393,6 +405,7 @@ internal class SoundAnalysisController(private val host: MainActivityCore) : Clo
         private const val PREFS = "mp3_player_ui"
         private const val ENABLED = "soundAnalysisEnabled"
         private const val CLUSTERING_VERSION = "similarClusteringVersion"
+        internal const val CLUSTERING_VARIATION = "similarClusteringVariation"
         private const val CONSTRAINT_RECHECK_MS = 5_000L
 
         private fun usableCount(profiles: Map<String, TrackAudioProfile>): Int =

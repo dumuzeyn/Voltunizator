@@ -335,6 +335,20 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     @Test
+    public void stoppedPlayerResumesOnFirstToggleEvenWithRetainedPlayIntent() {
+        activity = launchMainActivity();
+        MainActivityCore host = (MainActivityCore) activity;
+        startQueue(Arrays.asList(firstTrack, secondTrack), Player.REPEAT_MODE_ONE);
+        waitForPlayingUri("Stopped-player setup did not start", firstTrack.uri);
+        controllerAction(() -> { controller.stop(); controller.setPlayWhenReady(true); });
+        InstrumentedTestSupport.waitFor("Stopped state did not reach UI", 5000L,
+                () -> host.playbackSnapshot().phase == PlaybackPhase.IDLE);
+        assertFalse(host.isPlaybackPlaying());
+        instrumentation.runOnMainSync(host.playbackController::toggle);
+        waitForPlayingUri("First toggle did not resume stopped playback", firstTrack.uri);
+    }
+
+    @Test
     public void automaticGapResumesWithScreenOffAndKeepsSessionActive() throws Exception {
         beginGap(Arrays.asList(firstTrack, secondTrack), Player.REPEAT_MODE_OFF);
         long gapStarted = SystemClock.elapsedRealtime();

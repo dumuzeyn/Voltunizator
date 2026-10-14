@@ -35,6 +35,25 @@ public class PlaybackUiStateTest {
     }
 
     @Test
+    public void stalePlayIntentOnIdleOrEmptyQueueDoesNotReportActivePlayback() {
+        PlaybackUiState state = new PlaybackUiState();
+        state.updateSnapshot(snapshot(Collections.singletonList("track"), PlaybackPhase.IDLE));
+        assertFalse(state.isPlaying());
+        state.updateSnapshot(snapshot(Collections.emptyList(), PlaybackPhase.READY));
+        assertFalse(state.isPlaying());
+        state.updateSnapshot(snapshot(Collections.singletonList("track"), PlaybackPhase.BUFFERING));
+        assertTrue(state.isPlaying());
+        state.updateSnapshot(snapshot(Collections.singletonList("track"), PlaybackPhase.READY));
+        assertTrue(state.isPlaying());
+    }
+
+    private static PlaybackSnapshot snapshot(java.util.List<String> ids, PlaybackPhase phase) {
+        return new PlaybackSnapshot(ids, ids.isEmpty() ? "" : ids.get(0), ids.isEmpty() ? -1 : 0,
+                0L, 1000L, true, phase == PlaybackPhase.IDLE ? Player.STATE_IDLE : Player.STATE_READY,
+                Player.REPEAT_MODE_OFF, false, phase, PauseReason.NONE, StopReason.NONE, null, 1L);
+    }
+
+    @Test
     public void cachedCurrentIndexIsValidatedAfterLibraryReorder() {
         LibraryState library = new LibraryState();
         Track current = new Track("track-current", "content://song/current", "Current",

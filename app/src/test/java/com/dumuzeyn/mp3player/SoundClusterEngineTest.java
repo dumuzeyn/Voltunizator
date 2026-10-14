@@ -193,6 +193,37 @@ public class SoundClusterEngineTest {
         assertTrue(largest(groups) < profiles.size() * 0.55);
     }
 
+    @Test
+    public void broadCohortDoesNotFragmentIntoSingleSongPanels() {
+        ArrayList<TrackAudioProfile> profiles = cloud("broad", 180, 4, 87L);
+        for (long variation = 0; variation < 4; variation++) {
+            ArrayList<SoundGroup> groups = new SoundClusterEngine().cluster(profiles, variation);
+            long singles = groups.stream().filter(group -> group.trackIds.size() == 1).count();
+            System.out.println("broad_cohort variation=" + variation + " groups=" + groups.size() + " singles=" + singles);
+            assertTrue("singletons=" + singles, singles <= profiles.size() / 20);
+            assertTrue("groups=" + groups.size(), groups.size() <= profiles.size() / 5);
+            assertEquals(profiles.size(), membership(groups).size());
+            assertEquals(profiles.size(), groups.stream().mapToInt(group -> group.trackIds.size()).sum());
+        }
+    }
+
+    @Test
+    public void varyingStartsDoNotAttachAnIsolatedOutlierOrChangeAudioProfiles() {
+        ArrayList<TrackAudioProfile> profiles = new ArrayList<>();
+        for (int index = 0; index < 40; index++) profiles.add(profile("dense-" + index, values(4)));
+        double[] outlier = values(4);
+        Arrays.fill(outlier, 1000);
+        profiles.add(profile("outlier", outlier));
+        for (long variation = 1; variation <= 5; variation++) {
+            ArrayList<SoundGroup> groups = new SoundClusterEngine().cluster(profiles, variation);
+            assertEquals(2, groups.size());
+            for (SoundGroup group : groups) {
+                if (group.trackIds.contains("outlier")) assertEquals(1, group.trackIds.size());
+            }
+            org.junit.Assert.assertArrayEquals(outlier, profiles.get(40).features, 0.0);
+        }
+    }
+
     private static ArrayList<TrackAudioProfile> fourFamilies(int each) {
         ArrayList<TrackAudioProfile> result = new ArrayList<>();
         result.addAll(family("slow", each, 0, 10L));

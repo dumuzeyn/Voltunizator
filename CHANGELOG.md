@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.4.0
+
+- Replaced greedy audio grouping with Apache Commons Math K-means++, adaptive cohesion splitting and nearby-group merging to reduce single-song panels without absorbing unrelated outliers.
+- Manual group rebuilds advance a persisted variation counter and apply a bounded 0.025-unit perturbation to temporary normalized clustering points. Saved measurements and audio files are untouched; stable groups need not change.
+- Migrated saved profiles to clustering version 6 without reanalysis and resumed pending analysis after manual rebuilds.
+- Clear queue now resets play intent, and idle/empty playback projections no longer block background audio analysis.
+- Added clustering coverage, outlier, bounded-jitter, duplicate-input, singleton-count and cached-rebuild regression checks.
+
 ## 4.3.4
 
 - Relaxed bounded cluster cohesion and added a nearest-neighbor pass for singleton groups while retaining outlier isolation. Saved profiles migrate to clustering version 5 without reanalyzing audio.

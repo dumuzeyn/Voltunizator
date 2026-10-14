@@ -131,7 +131,7 @@ class PlaybackController(private val host: MainActivityCore) : Player.Listener {
 
     fun toggle() = connection.execute { controller ->
         if (controller.mediaItemCount == 0) return@execute
-        if (controller.isPlaying || controller.playWhenReady) {
+        if (controller.playbackState != Player.STATE_IDLE && (controller.isPlaying || controller.playWhenReady)) {
             controller.pause()
         } else {
             if (controller.playbackState == Player.STATE_IDLE) controller.prepare()
@@ -167,6 +167,7 @@ class PlaybackController(private val host: MainActivityCore) : Player.Listener {
     }
 
     fun clearQueue() = connection.execute { controller ->
+        controller.pause()
         controller.stop()
         controller.clearMediaItems()
         controller.sendCustomCommand(Media3Commands.CLEAR_QUEUE_COMMAND, Bundle.EMPTY)

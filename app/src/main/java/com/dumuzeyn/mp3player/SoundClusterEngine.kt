@@ -5,25 +5,38 @@ import java.security.MessageDigest
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.ceil
+import kotlin.math.sqrt
 
-/** Adaptive audio grouping with a bounded pairwise diameter and no forced outlier merges. */
+/** K-means++ partitions refined by original-space cohesion, not a fixed album count. */
 internal class SoundClusterEngine {
-    fun cluster(source: List<TrackAudioProfile?>?): ArrayList<SoundGroup> {
+    @JvmOverloads
+    fun cluster(source: List<TrackAudioProfile?>?, variation: Long = 0): ArrayList<SoundGroup> {
         val profiles = usableProfiles(source)
         if (profiles.size < MIN_LIBRARY_SIZE) return ArrayList()
         val normalized = SoundFeatureNormalizer.normalize(profiles)
         val threshold = adaptiveThreshold(normalized.vectors)
         val diameter = cohesionDiameter(threshold)
+        val partitioner = SoundKMeansPartitioner(normalized.vectors, profiles.map { it.trackId }, variation)
+        val initialCount = ceil(sqrt(profiles.size / 2.0)).toInt().coerceIn(2, 16)
+        val pending = java.util.ArrayDeque<List<Int>>()
+        partitioner.partition(profiles.indices.toList(), initialCount).forEach(pending::addLast)
         val clusters = ArrayList<MutableCluster>()
-        for (index in profiles.indices) {
-            addToNearest(
-                clusters,
-                profiles[index].trackId,
-                normalized.vectors[index],
-                threshold,
-                diameter,
-            )
+        while (pending.isNotEmpty()) {
+            val indices = pending.removeFirst()
+            val cluster = MutableCluster(profiles[indices.first()].trackId, normalized.vectors[indices.first()])
+            indices.drop(1).forEach { cluster.add(profiles[it].trackId, normalized.vectors[it]) }
+            if (cluster.cohesive(diameter)) {
+                clusters.add(cluster)
+            } else {
+                val split = partitioner.partition(indices, 2)
+                if (split.size > 1) split.forEach(pending::addLast)
+                else indices.forEach {
+                    addToNearest(clusters, profiles[it].trackId, normalized.vectors[it], threshold, diameter)
+                }
+            }
         }
+        joinNearbyClusters(clusters, threshold, diameter)
         joinSingletons(clusters, threshold, diameter)
         val groups = ArrayList<SoundGroup>()
         for (cluster in clusters) {
@@ -72,7 +85,7 @@ internal class SoundClusterEngine {
                 centroid.indices.forEach { centroid[it] += member[it] / members.size }
             }
             val current = SoundFeatureNormalizer.distance(vector, centroid)
-            if (current < distance && current <= threshold * 1.25) {
+            if (current < distance && current <= threshold * 1.5) {
                 distance = current
                 nearest = group
             }
@@ -96,10 +109,25 @@ internal class SoundClusterEngine {
 
         fun accepts(vector: DoubleArray, threshold: Double): Boolean =
             members.all { SoundFeatureNormalizer.distance(vector, it) <= threshold }
+
+        fun cohesive(diameter: Double): Boolean {
+            if (members.maxOf { SoundFeatureNormalizer.distance(it, centroid) } * 2 <= diameter) return true
+            for (first in members.indices) for (second in 0 until first) {
+                if (SoundFeatureNormalizer.distance(members[first], members[second]) > diameter) return false
+            }
+            return true
+        }
+
+        fun accepts(other: MutableCluster, diameter: Double): Boolean =
+            other.members.all { accepts(it, diameter) }
+
+        fun add(other: MutableCluster) {
+            other.trackIds.indices.forEach { add(other.trackIds[it], other.members[it]) }
+        }
     }
 
     companion object {
-        const val CLUSTERING_VERSION = 5
+        const val CLUSTERING_VERSION = 6
         private const val MIN_LIBRARY_SIZE = 4
         private const val DISTANCE_SAMPLE_LIMIT = 256
 
@@ -161,7 +189,25 @@ internal class SoundClusterEngine {
             }
         }
 
-        private fun cohesionDiameter(threshold: Double): Double = min(1.75, threshold * 1.8)
+        private fun cohesionDiameter(threshold: Double): Double = min(2.5, threshold * 2.4 - 0.21)
+
+        private fun joinNearbyClusters(clusters: ArrayList<MutableCluster>, threshold: Double, diameter: Double) {
+            var changed: Boolean
+            do {
+                changed = false
+                for (small in clusters.sortedBy { it.trackIds.size }) {
+                    if (small !in clusters) continue
+                    val nearest = clusters.asSequence().filter { it !== small }
+                        .map { it to SoundFeatureNormalizer.distance(small.centroid, it.centroid) }
+                        .filter { it.second <= threshold * 0.6 }
+                        .sortedBy { it.second }
+                        .firstOrNull { it.first.accepts(small, diameter) }?.first ?: continue
+                    nearest.add(small)
+                    clusters.remove(small)
+                    changed = true
+                }
+            } while (changed)
+        }
 
         private fun joinSingletons(clusters: ArrayList<MutableCluster>, threshold: Double, diameter: Double) {
             for (single in clusters.toList()) {
@@ -169,7 +215,7 @@ internal class SoundClusterEngine {
                 val target = clusters.asSequence().filter { it !== single }
                     .filter { it.accepts(single.centroid, diameter) }
                     .map { it to SoundFeatureNormalizer.distance(single.centroid, it.centroid) }
-                    .filter { it.second <= threshold * 1.25 }
+                    .filter { it.second <= threshold * 1.5 }
                     .minByOrNull { it.second }?.first ?: continue
                 target.add(single.trackIds.first(), single.members.first())
                 clusters.remove(single)
