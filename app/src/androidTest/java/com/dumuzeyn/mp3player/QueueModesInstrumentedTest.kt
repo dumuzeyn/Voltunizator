@@ -29,7 +29,8 @@ class QueueModesInstrumentedTest {
         }
         PlaybackStateManager(context).clear()
         context.getSharedPreferences("mp3_player_ui", 0).edit()
-            .remove(QueueCreationMode.PREFERENCE).putBoolean("soundAnalysisEnabled", true).commit()
+            .remove(QueueCreationMode.PREFERENCE).remove(SoundAnalysisController.CLUSTERING_VARIATION)
+            .putBoolean("soundAnalysisEnabled", true).commit()
         files.forEach { it.delete() }
     }
 
@@ -104,11 +105,26 @@ class QueueModesInstrumentedTest {
         store.close()
         val preferences = context.getSharedPreferences("mp3_player_ui", 0)
         preferences.edit().putBoolean("soundAnalysisEnabled", true)
-            .putInt("similarClusteringVersion", 3).commit()
+            .putInt("similarClusteringVersion", 3).remove(SoundAnalysisController.CLUSTERING_VARIATION).commit()
         val host = launch(tracks, migration = true)
         await("Saved groups were not migrated") {
             preferences.getInt("similarClusteringVersion", 0) == SoundClusterEngine.CLUSTERING_VERSION &&
                 host.soundAnalysisController.groups().size == 2
+        }
+        instrumentation.runOnMainSync { host.navigationState.tabIndex = LibraryTabs.SOUND; host.render() }
+        for (variation in 1L..2L) {
+            instrumentation.runOnMainSync {
+                descendants(host.list).filterIsInstance<Button>()
+                    .single { it.text.toString() == "Пересобрать группы" }.performClick()
+            }
+            await("Rebuild did not persist a new start variation") {
+                preferences.getLong(SoundAnalysisController.CLUSTERING_VARIATION, 0L) == variation &&
+                    !host.soundAnalysisController.rebuildingGroups() &&
+                    descendants(host.list).filterIsInstance<Button>().any {
+                        it.text.toString() == "Пересобрать группы" && it.isEnabled
+                    }
+            }
+            assertEquals(8, host.soundAnalysisController.groups().sumOf { it.trackIds.size })
         }
         val updated = SoundProfileStore(context)
         try {
@@ -122,6 +138,34 @@ class QueueModesInstrumentedTest {
             assertEquals(1, isolated.trackIds.size)
         } finally {
             updated.close()
+        }
+    }
+
+    @Test fun manualRebuildResumesPendingAudioAnalysis() {
+        val tracks = prepareTracks(false)
+        val store = SoundProfileStore(context)
+        tracks.forEach { track -> store.saveProfile(TrackAudioProfile.analyzed(track,
+            DoubleArray(TrackAudioProfile.FEATURE_COUNT))) }
+        store.close()
+        val host = launch(tracks, migration = true)
+        await("Cached groups were not loaded") {
+            host.soundAnalysisController.groups().sumOf { it.trackIds.size } == tracks.size
+        }
+        val pendingStore = SoundProfileStore(context)
+        pendingStore.mark(tracks.last(), SoundAnalysisState.QUEUED, "")
+        pendingStore.close()
+        instrumentation.runOnMainSync {
+            host.navigationState.tabIndex = LibraryTabs.SOUND
+            host.render()
+            descendants(host.list).filterIsInstance<Button>()
+                .single { it.text.toString() == "Пересобрать группы" }.performClick()
+        }
+        InstrumentedTestSupport.waitFor("Manual rebuild left pending analysis stopped", 30000) {
+            val profiles = SoundProfileStore(context)
+            try {
+                val updated = profiles.loadProfiles()[tracks.last().trackId]
+                updated?.usable() == true && updated.features.any { it != 0.0 }
+            } finally { profiles.close() }
         }
     }
 

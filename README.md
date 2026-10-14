@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.3.4-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
+    <img src="https://img.shields.io/badge/Скачать_APK-Версия_4.4.0-9b4dff?style=for-the-badge" alt="Скачать Voltunizator">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="Open English version">
@@ -31,7 +31,7 @@
 
 Voltunizator превращает музыку на телефоне в личную медиатеку. Приложение находит треки, продолжает играть в фоне, помнит очередь и позицию, а внешний вид можно настроить под себя. Для прослушивания не нужны интернет, регистрация или облачный сервис.
 
-**Версия 4.3.4.** Разнообразные пересоздаваемые очереди, меньше одиночных тематических альбомов, задержка между песнями до пяти минут и вращение обложек без изменения масштаба и обрезания.
+**Версия 4.4.0.** Тематические альбомы используют K-means++: центры групп уточняются итеративно, близкие мелкие группы объединяются, а явно непохожие треки остаются отдельно. Кнопка «Пересобрать группы» добавляет небольшую вариацию точек кластеризации без повторного анализа аудио.
 
 <a id="screenshots"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Главная: продолжить прослушивание и быстрые очереди"><br><em>Главная и быстрые очереди</em></p>
@@ -84,7 +84,7 @@ flowchart LR
 
 ### Тематические альбомы
 
-Вкладка «Тематические альбомы» локально анализирует звучание и адаптивно объединяет близкие треки по энергии, динамике, спектру и тембру. BPM не влияет на расстояние, состав или название групп. Аудио и профили не отправляются в интернет.
+Вкладка «Тематические альбомы» локально анализирует звучание и объединяет близкие треки по энергии, динамике, спектру и тембру с помощью K-means++. Число групп подбирается адаптивно: неоднородные группы разделяются, близкие мелкие группы объединяются. При ручной пересборке временные нормализованные точки слегка меняются; сохранённые измерения не перезаписываются, а хорошо отделённые группы могут остаться прежними. BPM не влияет на расстояние, состав или название групп. Аудио и профили не отправляются в интернет.
 
 <p align="center"><img src="docs/screenshots/collection-4.2.0/06-thematic.png" width="260" alt="Тематические альбомы после анализа"><br><em>Тематические альбомы</em></p>
 
@@ -274,7 +274,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Version_4.3.4-9b4dff?style=for-the-badge" alt="Download Voltunizator">
+    <img src="https://img.shields.io/badge/Download_APK-Version_4.4.0-9b4dff?style=for-the-badge" alt="Download Voltunizator">
   </a>
   <a href="#russian">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Открыть русскую версию">
@@ -289,7 +289,7 @@ Android lint, debug APK и компиляцию instrumentation-тестов.
 
 Voltunizator turns locally stored music into a personal library. It finds tracks quickly, keeps playing in the background, remembers the queue and position, and offers visual customization. Playback requires no internet connection, account, or cloud service. Screenshots appear beside the features they show.
 
-**Version 4.3.4.** More varied regenerated queues, fewer single-song thematic albums, an inter-track delay up to five minutes and constant-scale cover rotation without clipping.
+**Version 4.4.0.** Thematic albums use K-means++ with iterative center refinement, nearby small-group merging and isolated outlier protection. Rebuild groups adds a small variation to clustering points without reanalyzing audio.
 
 <a id="screenshots-en"></a>
 <p align="center"><img src="docs/screenshots/collection-4.2.0/01-home.png" width="260" alt="Home screen with listening continuity and quick queues"><br><em>Home and quick queues</em></p>
@@ -342,7 +342,7 @@ Playlists let you build your own collections and start one with a single action.
 
 ### Thematic albums
 
-The Thematic albums tab analyzes sound locally and adaptively groups nearby tracks by energy, dynamics, spectrum, and timbre. BPM does not affect group distance, membership, or names. Audio and profiles never leave the device.
+The Thematic albums tab groups tracks locally by energy, dynamics, spectrum, and timbre using K-means++. The group count is adaptive: heterogeneous groups split, while nearby small groups merge. Manual rebuilds slightly perturb temporary normalized points without rewriting saved measurements; well-separated groups may remain unchanged. BPM does not affect group distance, membership, or names. Audio and profiles never leave the device.
 
 <p align="center"><img src="docs/screenshots/collection-4.2.0/06-thematic.png" width="260" alt="Thematic albums after analysis"><br><em>Thematic albums</em></p>
 
